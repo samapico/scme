@@ -59,6 +59,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_glWidget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="editorConfig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="editor.h">
@@ -71,6 +74,9 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="glWidget.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="editorConfig.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
