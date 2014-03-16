@@ -16,6 +16,7 @@ public:
 
     enum GridPreset
     {
+        Grey,
         RG,
         RB,
         GR,

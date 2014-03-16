@@ -64,20 +64,7 @@ void EditorConfig::setDefaultConfig()
     mGridSizes[3] = 64;
     mGridSizes[4] = 256;
 
-    QPen pen(QColor(0,0,128,32));
-    mGridPens[0] = pen;
-
-    pen.setColor(QColor(128,0,128,96));
-    mGridPens[1] = pen;
-
-    pen.setColor(QColor(128,0,255,128));
-    mGridPens[2] = pen;
-
-    pen.setColor(QColor(128,128,255,192));
-    mGridPens[3] = pen;
-
-    pen.setColor(QColor(255,128,255,255));
-    mGridPens[4] = pen;
+    setGridPreset(Grey);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -98,7 +85,9 @@ void EditorConfig::setGridPreset(GridPreset preset)
 
         float a = 0.25f + 0.50f * ((float)i / (mGridSizeCount - 1));
 
-        if (preset == RG)
+        if (preset == Grey)
+            c.setRgbF(p, p, p, a);
+        else if (preset == RG)
             c.setRgbF(p, s, t, a);
         else if (preset == RB)
             c.setRgbF(p, t, s, a);
