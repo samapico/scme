@@ -31,6 +31,12 @@ Editor::Editor(QWidget *parent, Qt::WFlags flags) :
         QString()
 #endif
         ));
+
+    bool bConnect = true;
+    
+    bConnect &= connect(ui.ChangeGridPreset, SIGNAL(clicked()), this, SLOT(toggleGridPreset()));
+
+    Q_ASSERT(bConnect);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -57,4 +63,18 @@ QPoint Editor::boundPixelToLevel(const QPoint& pixel) const
         bounded.setY(levelPixelSize().height());
 
     return bounded;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::toggleGridPreset()
+{
+    static int gridPreset_s = -1;
+
+    gridPreset_s++;
+    gridPreset_s %= 6;
+
+    mConfig.setGridPreset((EditorConfig::GridPreset)gridPreset_s);
+
+    centralWidget()->update();
 }

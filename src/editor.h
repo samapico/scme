@@ -37,6 +37,9 @@ public:
 
     QPoint boundPixelToLevel(const QPoint& pixel) const;
 
+public slots:
+    void toggleGridPreset();
+
 private:
     Ui::EditorClass ui;
 

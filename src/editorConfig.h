@@ -14,6 +14,17 @@ public:
 
     void setDefaultConfig();
 
+    enum GridPreset
+    {
+        RG,
+        RB,
+        GR,
+        GB,
+        BR,
+        BG,
+    };
+    void setGridPreset(GridPreset);
+
     float wheelZoomSpeed() const;
 
     float minZoom() const;
