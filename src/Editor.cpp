@@ -1,5 +1,7 @@
-#include "editor.h"
-#include "glWidget.h"
+#include "Editor.h"
+#include "EditorWidget.h"
+#include "ThumbnailWidget.h"
+
 #include "appver.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -12,13 +14,16 @@ const QSize Editor::TILE_SIZE(16,16);
 
 Editor::Editor(QWidget *parent, Qt::WFlags flags) :
     QMainWindow(parent, flags),
-    mLevelSize(1024, 1024)
+    mLevelSize(1024, 1024),
+    mEditorWidget(0),
+    mThumbnailWidget(0)
 {
     mLevelPixelSize = QSize(mLevelSize.width() * TILE_WIDTH, mLevelSize.height() * TILE_HEIGHT);
 
     ui.setupUi(this);
 
-    setCentralWidget(new GLWidget(this));
+    mEditorWidget = new EditorWidget(this);
+    setCentralWidget(mEditorWidget);
 
     setWindowTitle(tr("SCME v%1.%2.%3.%4%5").arg(
         QString::number(APP_VERSION_MAJOR),
@@ -32,9 +37,13 @@ Editor::Editor(QWidget *parent, Qt::WFlags flags) :
 #endif
         ));
 
+    initRadar();
+
     bool bConnect = true;
     
-    bConnect &= connect(ui.ChangeGridPreset, SIGNAL(clicked()), this, SLOT(toggleGridPreset()));
+    bConnect &= connect(mEditorWidget, SIGNAL(viewMoved(const QRect&)), mThumbnailWidget, SLOT(redrawView(const QRect&)));
+
+    bConnect &= connect(ui.changeGridPreset, SIGNAL(clicked()), this, SLOT(toggleGridPreset()));
 
     Q_ASSERT(bConnect);
 }
@@ -77,4 +86,12 @@ void Editor::toggleGridPreset()
     mConfig.setGridPreset((EditorConfig::GridPreset)gridPreset_s);
 
     centralWidget()->update();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::initRadar()
+{
+    mThumbnailWidget = new ThumbnailWidget(this);
+    ui.dockRadar->setWidget(mThumbnailWidget);
 }

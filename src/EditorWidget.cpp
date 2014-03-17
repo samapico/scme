@@ -1,8 +1,8 @@
-#include "glWidget.h"
+#include "EditorWidget.h"
 
 #include <QtGui/QPaintEvent>
 
-#include "editor.h"
+#include "Editor.h"
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
@@ -10,7 +10,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 
-GLWidget::GLWidget(Editor* editor, QWidget *parent) :
+EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
     mEditor(editor),
     mTopLeft(0, 0),
@@ -20,28 +20,28 @@ GLWidget::GLWidget(Editor* editor, QWidget *parent) :
 
 //////////////////////////////////////////////////////////////////////////
 
-GLWidget::~GLWidget()
+EditorWidget::~EditorWidget()
 {
 
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-QSize GLWidget::minimumSizeHint() const
+QSize EditorWidget::minimumSizeHint() const
 {
     return QSize(50, 50);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-QSize GLWidget::sizeHint() const
+QSize EditorWidget::sizeHint() const
 {
     return QSize(400, 400);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::initializeGL()
+void EditorWidget::initializeGL()
 {
     QGLWidget::initializeGL();
     /*
@@ -63,7 +63,7 @@ void GLWidget::initializeGL()
 
 //////////////////////////////////////////////////////////////////////////
 /*
-void GLWidget::paintGL()
+void EditorWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -76,8 +76,10 @@ void GLWidget::paintGL()
 */
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::resizeGL( int width, int height )
+void EditorWidget::resizeGL( int width, int height )
 {
+    emit viewMoved(getViewBounds());
+
     //QGLWidget::resizeGL(width, height);
     /*
     int side = qMin(width, height);
@@ -109,7 +111,7 @@ void GLWidget::resizeGL( int width, int height )
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::mousePressEvent(QMouseEvent *event)
+void EditorWidget::mousePressEvent(QMouseEvent *event)
 {
     mDragStart = event->pos();
     mCenterOrig = getViewCenter();
@@ -118,7 +120,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::mouseMoveEvent(QMouseEvent *event)
+void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if (mDragging)
     {
@@ -128,7 +130,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::wheelEvent(QWheelEvent *event)
+void EditorWidget::wheelEvent(QWheelEvent *event)
 {
     if (event->delta() > 0)
         zoomInAt(screenToLevelPixel(event->pos()), 1 + (event->delta()*mEditor->config().wheelZoomSpeed()));
@@ -138,14 +140,14 @@ void GLWidget::wheelEvent(QWheelEvent *event)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::mouseReleaseEvent(QMouseEvent *event)
+void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     mDragging = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::paintEvent(QPaintEvent *event)
+void EditorWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter;
     painter.begin(this);
@@ -163,9 +165,9 @@ void GLWidget::paintEvent(QPaintEvent *event)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::drawGrid(QPainter& painter)
+void EditorWidget::drawGrid(QPainter& painter)
 {
-    //painter.setRenderHints(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::Antialiasing, false);
 
     QSize levelSize = mEditor->levelSize();
     QSize levelPxSize = mEditor->levelPixelSize();
@@ -224,17 +226,20 @@ void GLWidget::drawGrid(QPainter& painter)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::setTopLeft(const QPoint& topLeft, bool redraw /*= true*/)
+void EditorWidget::setTopLeft(const QPoint& topLeft, bool redraw /*= true*/)
 {
     mTopLeft = topLeft;
 
     if (redraw)
+    {
         update();
+        emit viewMoved(getViewBounds());
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::drawDebug(QPainter& painter)
+void EditorWidget::drawDebug(QPainter& painter)
 {
     QString str;
 
@@ -249,7 +254,7 @@ void GLWidget::drawDebug(QPainter& painter)
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::zoomInAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
+void EditorWidget::zoomInAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
 {
     QPoint targetCenter = mEditor->boundPixelToLevel(center);
     QPoint screenTarget = levelPixelToScreen(targetCenter);
@@ -264,12 +269,15 @@ void GLWidget::zoomInAt(const QPoint& center, float zoomMultiplier, bool redraw 
     alignView(screenTarget, targetCenter, false);
 
     if (redraw)
+    {
         update();
+        emit viewMoved(getViewBounds());
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::zoomOutAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
+void EditorWidget::zoomOutAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
 {
     QPoint targetCenter = mEditor->boundPixelToLevel(center);
     QPoint screenTarget = levelPixelToScreen(targetCenter);
@@ -284,37 +292,43 @@ void GLWidget::zoomOutAt(const QPoint& center, float zoomMultiplier, bool redraw
     alignView(screenTarget, targetCenter, false);
 
     if (redraw)
+    {
         update();
+        emit viewMoved(getViewBounds());
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-QPoint GLWidget::getViewCenter() const
+QPoint EditorWidget::getViewCenter() const
 {
     return getViewBounds().center();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::setCenter(const QPoint& centerPixel, bool redraw /*= true*/)
+void EditorWidget::setCenter(const QPoint& centerPixel, bool redraw /*= true*/)
 {
     mTopLeft.setX(centerPixel.x() - QWidget::width() /(mZoomFactor*2));
     mTopLeft.setY(centerPixel.y() - QWidget::height()/(mZoomFactor*2));
 
     if (redraw)
+    {
         update();
+        emit viewMoved(getViewBounds());
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-QRect GLWidget::getViewBounds() const
+QRect EditorWidget::getViewBounds() const
 {
     return QRect(mTopLeft, QWidget::size()/mZoomFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void GLWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel, bool redraw /*= true*/)
+void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel, bool redraw /*= true*/)
 {
      mTopLeft = levelPixel - (screenPixel / mZoomFactor);
 
@@ -326,5 +340,8 @@ void GLWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel, bo
          setCenter(boundedCenter, false);
 
      if (redraw)
+     {
          update();
+         emit viewMoved(getViewBounds());
+     }
 }

@@ -2,10 +2,19 @@
 #define EDITOR_H
 
 #include <QtGui/QMainWindow>
-#include "ui_editor.h"
+#include "ui_Editor.h"
 
-#include "editorConfig.h"
+#include "EditorConfig.h"
 
+
+//////////////////////////////////////////////////////////////////////////
+//Forward declarations
+
+class EditorWidget;
+class ThumbnailWidget;
+
+
+/// @brief   Editor class
 class Editor : public QMainWindow
 {
     Q_OBJECT
@@ -41,12 +50,18 @@ public slots:
     void toggleGridPreset();
 
 private:
+
+    void initRadar();
+
     Ui::EditorClass ui;
 
     EditorConfig mConfig;
 
     QSize mLevelSize;
     QSize mLevelPixelSize;
+
+    EditorWidget*    mEditorWidget;
+    ThumbnailWidget* mThumbnailWidget;
 };
 
 //////////////////////////////////////////////////////////////////////////

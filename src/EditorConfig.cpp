@@ -1,4 +1,4 @@
-#include "editorConfig.h"
+#include "EditorConfig.h"
 
 #include <QtCore/QDebug>
 
@@ -8,9 +8,9 @@ EditorConfig::EditorConfig() :
     mGridPens(0),
     mGridSizes(0),
     mGridSizeCount(0),
-    mMinZoom(1.0f/16.0f),
-    mMaxZoom(4.0f),
-    mWheelZoomSpeed(0.00208333333f) //25% per mouse wheel increment (typically delta = 120; 0.25 / 120 = 0.208333)
+    mMinZoom(0.05852766346593507087334247828075f),
+    mMaxZoom(3.375f),
+    mWheelZoomSpeed(0.004166666666f) //50% per mouse wheel increment (typically delta = 120; 0.50 / 120 = 0.004166666666f)
 {
     setDefaultConfig();
 }

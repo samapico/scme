@@ -1,5 +1,5 @@
-#ifndef GLWIDGET_H
-#define GLWIDGET_H
+#ifndef EDITORWIDGET_H
+#define EDITORWIDGET_H
 
 #include <QtOpenGL/QGLWidget>
 
@@ -11,13 +11,13 @@ class Editor;
 
 //////////////////////////////////////////////////////////////////////////
 
-class GLWidget : public QGLWidget
+class EditorWidget : public QGLWidget
 {
     Q_OBJECT
 
 public:
-    GLWidget(Editor* editor, QWidget *parent = 0);
-    ~GLWidget();
+    EditorWidget(Editor* editor, QWidget *parent = 0);
+    ~EditorWidget();
 
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
@@ -34,6 +34,10 @@ public:
     void  setTopLeft(const QPoint& topLeft, bool redraw = true);
     void  setCenter(const QPoint& centerPixel, bool redraw = true);
     void  alignView(const QPoint& screenPixel, const QPoint& levelPixel, bool redraw = true);
+
+signals:
+
+    void  viewMoved(const QRect& viewBounds);
 
 protected:
     void initializeGL();
@@ -77,4 +81,4 @@ private:
     QPoint screenToLevelPixel(const QPoint& screenxy) const     { return (screenxy / mZoomFactor) + mTopLeft; }
 };
 
-#endif // GLWIDGET_H
+#endif // EDITORWIDGET_H
