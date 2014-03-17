@@ -42,6 +42,7 @@ Editor::Editor(QWidget *parent, Qt::WFlags flags) :
     bool bConnect = true;
     
     bConnect &= connect(mEditorWidget, SIGNAL(viewMoved(const QRect&)), mThumbnailWidget, SLOT(redrawView(const QRect&)));
+    bConnect &= connect(mThumbnailWidget, SIGNAL(doCenterView(const QPoint&)), mEditorWidget, SLOT(setCenter(const QPoint&)));
 
     bConnect &= connect(ui.changeGridPreset, SIGNAL(clicked()), this, SLOT(toggleGridPreset()));
 
@@ -81,7 +82,7 @@ void Editor::toggleGridPreset()
     static int gridPreset_s = -1;
 
     gridPreset_s++;
-    gridPreset_s %= 6;
+    gridPreset_s %= EditorConfig::GridPresetCount;
 
     mConfig.setGridPreset((EditorConfig::GridPreset)gridPreset_s);
 

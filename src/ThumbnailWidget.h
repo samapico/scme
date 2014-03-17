@@ -53,10 +53,13 @@ protected:
 
 private:
 
+    QPoint  screenToLevelPixel(const QPoint& screenxy);
+
     Editor* mEditor;
 
     /// Current area of our widget in which the thumbnail is drawn
     QRect   mThumbnailArea;
+    QPointF mThumbnailScale;
 
     QRect   mViewBounds;
 

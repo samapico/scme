@@ -17,6 +17,7 @@ ThumbnailWidget::ThumbnailWidget(Editor* editor, QWidget *parent) :
     mLevelBoundsPen(QColor(Qt::white)),
     mViewBoundsPen (QColor(Qt::red  ))
 {
+    setMouseTracking(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -98,6 +99,11 @@ void ThumbnailWidget::resizeGL( int width, int height )
         mThumbnailArea.setWidth(height - margin*2);
     }
 
+    Q_ASSERT(mEditor);
+    QSize  levelPixelSize = mEditor->levelPixelSize();
+
+    mThumbnailScale = QPointF((qreal)mThumbnailArea.width () / (qreal)mEditor->levelPixelSize().width(),
+                              (qreal)mThumbnailArea.height() / (qreal)mEditor->levelPixelSize().height());
 
     //QGLWidget::resizeGL(width, height);
     /*
@@ -132,12 +138,21 @@ void ThumbnailWidget::resizeGL( int width, int height )
 
 void ThumbnailWidget::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::LeftButton ||
+        event->button() == Qt::MiddleButton)
+    {
+        emit doCenterView(screenToLevelPixel(event->pos()));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void ThumbnailWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    if (event->buttons() & (Qt::LeftButton | Qt::MiddleButton))
+    {
+        emit doCenterView(screenToLevelPixel(event->pos()));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -205,16 +220,12 @@ void ThumbnailWidget::drawViewBounds(QPainter& painter)
     painter.setPen(mViewBoundsPen);
     
     QRectF viewBoundsScreen;
-    QSize  levelPixelSize = mEditor->levelPixelSize();
-    
-    qreal thumbnailScaleX = (qreal)mThumbnailArea.width () / (qreal)levelPixelSize.width ();
-    qreal thumbnailScaleY = (qreal)mThumbnailArea.height() / (qreal)levelPixelSize.height();
 
-    viewBoundsScreen.setLeft((qreal)mThumbnailArea.left() + (qreal)(mViewBounds.left() * thumbnailScaleX));
-    viewBoundsScreen.setWidth((qreal)(mViewBounds.width()*thumbnailScaleX));
+    viewBoundsScreen.setLeft((qreal)mThumbnailArea.left() + (qreal)(mViewBounds.left() * mThumbnailScale.x()));
+    viewBoundsScreen.setWidth((qreal)(mViewBounds.width()*mThumbnailScale.x()));
     
-    viewBoundsScreen.setTop((qreal)mThumbnailArea.top() + (qreal)(mViewBounds.top() * thumbnailScaleY));
-    viewBoundsScreen.setHeight((qreal)(mViewBounds.height()*thumbnailScaleY));
+    viewBoundsScreen.setTop((qreal)mThumbnailArea.top() + (qreal)(mViewBounds.top() * mThumbnailScale.y()));
+    viewBoundsScreen.setHeight((qreal)(mViewBounds.height()*mThumbnailScale.y()));
 
     painter.drawRect(viewBoundsScreen);
 }
@@ -233,4 +244,15 @@ void ThumbnailWidget::redrawView(const QRect& viewBounds)
     mViewBounds = viewBounds;
 
     update();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QPoint ThumbnailWidget::screenToLevelPixel(const QPoint& screenxy)
+{
+    QPoint px(
+        (screenxy.x() - mThumbnailArea.left()) / mThumbnailScale.x(),
+        (screenxy.y() - mThumbnailArea.top ()) / mThumbnailScale.y());
+
+    return (mEditor->boundPixelToLevel(px));
 }

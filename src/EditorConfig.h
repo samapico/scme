@@ -23,6 +23,8 @@ public:
         GB,
         BR,
         BG,
+
+        GridPresetCount
     };
     void setGridPreset(GridPreset);
 

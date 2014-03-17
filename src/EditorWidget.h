@@ -22,14 +22,14 @@ public:
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
 
-    void  setZoom(float zoom, bool redraw = true);
-
     void  zoomInAt(const QPoint& center, float zoomMultiplier, bool redraw = true);
 
     void  zoomOutAt(const QPoint& center, float zoomDivider, bool redraw = true);
 
     QRect  getViewBounds() const;
     QPoint getViewCenter() const;
+
+public slots:
 
     void  setTopLeft(const QPoint& topLeft, bool redraw = true);
     void  setCenter(const QPoint& centerPixel, bool redraw = true);
