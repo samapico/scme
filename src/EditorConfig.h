@@ -8,7 +8,7 @@ class EditorConfig
 
 public:
     EditorConfig();
-    ~EditorConfig();
+    virtual ~EditorConfig();
     
     const QPen& getGridPen(int tile) const;
 

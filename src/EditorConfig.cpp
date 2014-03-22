@@ -103,8 +103,6 @@ void EditorConfig::setGridPreset(GridPreset preset)
         //shift hue and grey it out a bit
         c.setHsv((c.hue() + (int)(60*((float)(i))/(mGridSizeCount - 1)))%360, c.saturation()*.75, c.value()*.75, a*255);
 
-        qDebug() << i << c.red() << c.green() << c.blue();
-
         mGridPens[i].setColor(c);
     }
 }

@@ -12,7 +12,7 @@
 
 class EditorWidget;
 class ThumbnailWidget;
-
+class LevelData;
 
 /// @brief   Editor class
 class Editor : public QMainWindow
@@ -26,10 +26,10 @@ public:
     static const QSize TILE_SIZE;
 
     Editor(QWidget *parent = 0, Qt::WFlags flags = 0);
-    ~Editor();
+    virtual ~Editor();
 
     /// Size (in tiles) of the current level
-    inline const QSize& levelSize() const;
+    QSize levelSize() const;
 
     /// Size (in pixels) of the current level
     inline const QSize& levelPixelSize() const;
@@ -46,23 +46,45 @@ public:
 
     QPoint boundPixelToLevel(const QPoint& pixel) const;
 
+    inline const LevelData* level() const;
+
 public slots:
+    
+    /// @returns True if the level is closed (or no level is currently loaded),
+    ///          false if the user cancels the operation         
+    bool closeLevel();
+
+    void newLevel();
+
+    void openLevel();
+
+    void saveLevel();
+
+    void saveLevelAs();
+
     void toggleGridPreset();
 
+    void onLevelLoaded();
+
 private:
+
+    void initEditorWidget();
+
+    void initTileset();
 
     void initRadar();
 
     Ui::EditorClass ui;
 
     EditorConfig mConfig;
-
-    QSize mLevelSize;
     QSize mLevelPixelSize;
+
+    LevelData*       mLevel;
 
     EditorWidget*    mEditorWidget;
     ThumbnailWidget* mThumbnailWidget;
 };
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -108,11 +130,6 @@ QPoint Editor::tileToPixel(const QPoint& tile) const
 
 //////////////////////////////////////////////////////////////////////////
 
-const QSize& Editor::levelSize() const
-{
-    return mLevelSize;
-}
-
 //////////////////////////////////////////////////////////////////////////
 
 const QSize& Editor::levelPixelSize() const
@@ -127,6 +144,12 @@ const EditorConfig& Editor::config() const
     return mConfig;
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+const LevelData* Editor::level() const
+{
+    return mLevel;
+}
 
 
 //////////////////////////////////////////////////////////////////////////

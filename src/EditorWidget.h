@@ -17,7 +17,7 @@ class EditorWidget : public QGLWidget
 
 public:
     EditorWidget(Editor* editor, QWidget *parent = 0);
-    ~EditorWidget();
+    virtual ~EditorWidget();
 
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
@@ -34,6 +34,7 @@ public slots:
     void  setTopLeft(const QPoint& topLeft, bool redraw = true);
     void  setCenter(const QPoint& centerPixel, bool redraw = true);
     void  alignView(const QPoint& screenPixel, const QPoint& levelPixel, bool redraw = true);
+    void  setZoomFactor(float factor, bool redraw = true);
 
 signals:
 

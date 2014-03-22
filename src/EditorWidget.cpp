@@ -113,6 +113,9 @@ void EditorWidget::resizeGL( int width, int height )
 
 void EditorWidget::mousePressEvent(QMouseEvent *event)
 {
+    if (!mEditor->level())
+        return;
+
     mDragStart = event->pos();
     mCenterOrig = getViewCenter();
     mDragging  = true;
@@ -122,7 +125,7 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
 void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    if (mDragging)
+    if (mDragging && mEditor->level())
     {
         setCenter(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
     }
@@ -132,6 +135,9 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 
 void EditorWidget::wheelEvent(QWheelEvent *event)
 {
+    if (!mEditor->level())
+        return;
+
     if (event->delta() > 0)
         zoomInAt(screenToLevelPixel(event->pos()), 1 + (event->delta()*mEditor->config().wheelZoomSpeed()));
     else
@@ -142,6 +148,9 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
 
 void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (!mEditor->level())
+        return;
+
     mDragging = false;
 }
 
@@ -154,11 +163,14 @@ void EditorWidget::paintEvent(QPaintEvent *event)
     
     painter.fillRect(event->rect(), QColor(Qt::black));
 
-    drawGrid(painter);
+    if (mEditor->level())
+    {
+        drawGrid(painter);
     
 #ifdef _DEBUG
-    drawDebug(painter);
+        drawDebug(painter);
 #endif
+    }
 
     painter.end();
 }
@@ -344,4 +356,16 @@ void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel
          update();
          emit viewMoved(getViewBounds());
      }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setZoomFactor(float factor, bool redraw /*= true*/)
+{
+    mZoomFactor = factor;
+    if (redraw)
+    {
+        update();
+        emit viewMoved(getViewBounds());
+    }
 }

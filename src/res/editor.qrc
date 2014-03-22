@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>graphics/flag.bmp</file>
+        <file>graphics/goal.bmp</file>
+        <file>graphics/over1.bmp</file>
+        <file>graphics/over2.bmp</file>
+        <file>graphics/over3.bmp</file>
+        <file>graphics/over4.bmp</file>
+        <file>graphics/over5.bmp</file>
+        <file>graphics/tiles.bmp</file>
+    </qresource>
+</RCC>

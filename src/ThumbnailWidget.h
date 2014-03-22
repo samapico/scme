@@ -17,7 +17,7 @@ class ThumbnailWidget : public QGLWidget
 
 public:
     ThumbnailWidget(Editor* editor, QWidget *parent = 0);
-    ~ThumbnailWidget();
+    virtual ~ThumbnailWidget();
 
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
