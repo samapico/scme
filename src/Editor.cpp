@@ -120,7 +120,7 @@ void Editor::initRadar()
         mThumbnailWidget = new ThumbnailWidget(this);
 
         Q_ASSERT(mEditorWidget);
-        connect(mThumbnailWidget, SIGNAL(doCenterView(const QPoint&)), mEditorWidget, SLOT(setCenter(const QPoint&)));
+        connect(mThumbnailWidget, SIGNAL(doCenterView(const QPoint&)), mEditorWidget, SLOT(setViewCenterSmooth(const QPoint&)));
         connect(mEditorWidget, SIGNAL(viewMoved(const QRect&)), mThumbnailWidget, SLOT(redrawView(const QRect&)));
 
         ui.dockRadar->setWidget(mThumbnailWidget);
@@ -234,8 +234,8 @@ void Editor::onLevelLoaded()
     {
         if (mLevel)
         {
-            mEditorWidget->setZoomFactor(1.0, false);
-            mEditorWidget->setCenter(QPoint(levelPixelSize().width() / 2, levelPixelSize().height() / 2));
+            mEditorWidget->setZoomFactor(1.0);
+            mEditorWidget->setViewCenter(QPoint(levelPixelSize().width() / 2, levelPixelSize().height() / 2));
         }
         else
         {

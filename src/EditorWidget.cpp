@@ -1,6 +1,10 @@
 #include "EditorWidget.h"
 
 #include <QtGui/QPaintEvent>
+#include <QtCore/QPropertyAnimation>
+#include <QtCore/QElapsedTimer>
+
+#include <QtCore/QDebug>
 
 #include "Editor.h"
 
@@ -14,15 +18,21 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
     mEditor(editor),
     mTopLeft(0, 0),
-    mZoomFactor(1)
+    mZoomFactor(1),
+    mTargetZoomFactor(1),
+    mSmoothView(0),
+    mLastSmoothViewStart(0),
+    mDragging(false)
 {
+    this->setMouseTracking(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 EditorWidget::~EditorWidget()
 {
-
+    delete mLastSmoothViewStart;
+    delete mSmoothView;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,7 +88,7 @@ void EditorWidget::paintGL()
 
 void EditorWidget::resizeGL( int width, int height )
 {
-    emit viewMoved(getViewBounds());
+    emit viewMoved(viewBounds());
 
     //QGLWidget::resizeGL(width, height);
     /*
@@ -117,7 +127,7 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
         return;
 
     mDragStart = event->pos();
-    mCenterOrig = getViewCenter();
+    mCenterOrig = viewCenter();
     mDragging  = true;
 }
 
@@ -125,9 +135,16 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
 void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    mCursor = screenToLevelPixel(event->pos());
+
     if (mDragging && mEditor->level())
     {
-        setCenter(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
+        qDebug() << "Drag@ " << event->posF();
+        setViewCenterSmooth(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
+    }
+    else
+    {
+        update();
     }
 }
 
@@ -138,10 +155,15 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
     if (!mEditor->level())
         return;
 
-    if (event->delta() > 0)
-        zoomInAt(screenToLevelPixel(event->pos()), 1 + (event->delta()*mEditor->config().wheelZoomSpeed()));
-    else
-        zoomOutAt(screenToLevelPixel(event->pos()), 1 - (event->delta()*mEditor->config().wheelZoomSpeed()));
+    if (mDragging)
+        return;
+
+    float zoomMultiplier = 1 + (qAbs(event->delta())*mEditor->config().wheelZoomSpeed());
+
+    if (event->delta() > 0) //zoom in
+        zoomAt(screenToLevelPixel(event->pos()), zoomMultiplier);
+    else //zoom out
+        zoomAt(screenToLevelPixel(event->pos()), 1/zoomMultiplier);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -151,6 +173,18 @@ void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
     if (!mEditor->level())
         return;
 
+    if (mDragging)
+    {
+        if (mEditor->config().smoothDragSpeed() > 0)
+        {
+            qDebug() << "Release@ " << event->posF();
+        }
+        else if (mSmoothView && mSmoothView->state() == QAbstractAnimation::Running)
+        {
+            //Abort the last animation
+            mSmoothView->stop();
+        }
+    }
     mDragging = false;
 }
 
@@ -185,7 +219,7 @@ void EditorWidget::drawGrid(QPainter& painter)
     QSize levelPxSize = mEditor->levelPixelSize();
 
     //visible level bounds
-    QRect visibleLevelBounds = getViewBounds();
+    QRect visibleLevelBounds = viewBounds();
 
     //screen bounds in which the grid is to be drawn
     QRect screenBounds(QPoint(0, 0), QSize(QWidget::size()));
@@ -238,19 +272,6 @@ void EditorWidget::drawGrid(QPainter& painter)
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setTopLeft(const QPoint& topLeft, bool redraw /*= true*/)
-{
-    mTopLeft = topLeft;
-
-    if (redraw)
-    {
-        update();
-        emit viewMoved(getViewBounds());
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
 void EditorWidget::drawDebug(QPainter& painter)
 {
     QString str;
@@ -262,110 +283,224 @@ void EditorWidget::drawDebug(QPainter& painter)
         QString::number(mZoomFactor, 'f', 3));
     
     painter.drawText(0, 10, str);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void EditorWidget::zoomInAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
-{
-    QPoint targetCenter = mEditor->boundPixelToLevel(center);
-    QPoint screenTarget = levelPixelToScreen(targetCenter);
-
-    mZoomFactor *= zoomMultiplier;
-
-    /// @todo Proper upper zoom limit
-    if (mZoomFactor > mEditor->config().maxZoom())
-        mZoomFactor = mEditor->config().maxZoom();
-
-    //move center towards new center
-    alignView(screenTarget, targetCenter, false);
-
-    if (redraw)
-    {
-        update();
-        emit viewMoved(getViewBounds());
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void EditorWidget::zoomOutAt(const QPoint& center, float zoomMultiplier, bool redraw /*= true*/)
-{
-    QPoint targetCenter = mEditor->boundPixelToLevel(center);
-    QPoint screenTarget = levelPixelToScreen(targetCenter);
     
-    mZoomFactor /= zoomMultiplier;
+    str = QString("(%1,%2)").arg(
+        QString::number(mCursor.x()),
+        QString::number(mCursor.y()));
+
+    painter.drawText(0, 30, str);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::zoomAt(const QPoint& center, float zoomMultiplier)
+{
+    //make sure the level is still in the view
+    QPoint targetCenter = mEditor->boundPixelToLevel(center);
+    QPoint screenTarget = levelPixelToScreen(targetCenter);
+
+    float newZoomFactor = mTargetZoomFactor * zoomMultiplier;
+
+    //upper zoom limit
+    if (newZoomFactor > mEditor->config().maxZoom())
+        newZoomFactor = mEditor->config().maxZoom();
 
     //lower limit of zoom
-    if (mZoomFactor < mEditor->config().minZoom())
-        mZoomFactor = mEditor->config().minZoom();
+    if (newZoomFactor < mEditor->config().minZoom())
+        newZoomFactor = mEditor->config().minZoom();
 
-    //move center towards new center
-    alignView(screenTarget, targetCenter, false);
+    mTargetZoomFactor = newZoomFactor;
 
-    if (redraw)
+    QRect newView = QRect(targetCenter - (screenTarget / newZoomFactor), QWidget::size()/newZoomFactor);
+
+    //Make sure the view's center is in the level
+    QPoint boundedViewCenter = mEditor->boundPixelToLevel(newView.center());
+
+    newView.translate(boundedViewCenter - newView.center());
+
+    setViewBoundsSmooth(newView, false);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QRect EditorWidget::viewBounds() const
+{
+    return calcBoundsFromTopLeftAndZoom(mTopLeft, mZoomFactor);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QPoint EditorWidget::viewCenter() const
+{
+    return viewBounds().center();
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+float EditorWidget::zoomFactor() const
+{
+    return mZoomFactor;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setViewBounds(const QRect& bounds)
+{
+    mTopLeft = bounds.topLeft();
+    mZoomFactor = (float)QWidget::height()/(float)bounds.height();
+
+    if (updatesEnabled())
     {
         update();
-        emit viewMoved(getViewBounds());
+        emit viewMoved(viewBounds());
     }
 }
 
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
 
-QPoint EditorWidget::getViewCenter() const
+void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation /*= true*/)
 {
-    return getViewBounds().center();
+    if (mSmoothView && mSmoothView->state() == QAbstractAnimation::Running)
+    {
+        if (forceFinishPreviousAnimation)
+            setViewBounds(mSmoothView->endValue().toRect()); //Jump to the end of the previous transition
+
+        mSmoothView->stop();
+    }
+
+    int duration = mEditor->config().smoothCameraTime();
+
+    if (!duration)
+    {
+        // 0 ms duration; do not bother using an animation
+        setViewBounds(bounds);
+        return;
+    }
+
+    if (!mSmoothView)
+    {
+        mSmoothView = new QPropertyAnimation(this, "viewBounds");
+    }
+
+    mSmoothView->setEasingCurve(QEasingCurve(QEasingCurve::InOutCubic));
+    mSmoothView->setDuration(mEditor->config().smoothCameraTime());
+    mSmoothView->setStartValue(viewBounds());
+    mSmoothView->setEndValue(bounds);
+
+    mSmoothView->start();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setCenter(const QPoint& centerPixel, bool redraw /*= true*/)
+void EditorWidget::setViewTopLeft(const QPoint& topLeft)
+{
+    mTopLeft = topLeft;
+
+    if (updatesEnabled())
+    {
+        update();
+        emit viewMoved(viewBounds());
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setViewTopLeftSmooth(const QPoint& topLeft)
+{
+    setViewBoundsSmooth(QRect(topLeft, QWidget::size()/mZoomFactor));
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setViewCenter(const QPoint& centerPixel)
 {
     mTopLeft.setX(centerPixel.x() - QWidget::width() /(mZoomFactor*2));
     mTopLeft.setY(centerPixel.y() - QWidget::height()/(mZoomFactor*2));
 
-    if (redraw)
+    if (updatesEnabled())
     {
         update();
-        emit viewMoved(getViewBounds());
+        emit viewMoved(viewBounds());
     }
 }
 
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
 
-QRect EditorWidget::getViewBounds() const
+void EditorWidget::setViewCenterSmooth(const QPoint& centerPixel)
 {
-    return QRect(mTopLeft, QWidget::size()/mZoomFactor);
+    /// The thumbnail widget calls this method on mouse move events, which happen
+    /// really fast if you're dragging. If we use 'true' to jump to the end
+    /// of the previous animation, we get weird jumps if you are simply clicking around.
+    /// If we use 'false', the view does not move when you're dragging because the animation
+    /// gets cancelled before it has time to move at all.
+    /// Ugly solution is to use 'false', except if the animation has not been running for long enough
+    bool bFinishPreviousAnimation = false;
+    if (!mLastSmoothViewStart)
+    {
+        mLastSmoothViewStart = new QElapsedTimer;
+        mLastSmoothViewStart->start();
+    }
+    else
+    {
+        qint64 dt = mLastSmoothViewStart->restart();
+
+        bFinishPreviousAnimation = (dt < 100); ///< 10ms minimum animation time?
+    }
+
+    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(centerPixel, mZoomFactor), bFinishPreviousAnimation);
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setDefaultZoom()
+{
+    setZoomFactor(1.0);
+    mTargetZoomFactor = zoomFactor();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel, bool redraw /*= true*/)
+void EditorWidget::setZoomFactor(float factor)
+{
+    mZoomFactor = factor;
+    if (updatesEnabled())
+    {
+        update();
+        emit viewMoved(viewBounds());
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setZoomFactorSmooth(float factor)
+{
+    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(viewCenter(), factor));
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel)
 {
      mTopLeft = levelPixel - (screenPixel / mZoomFactor);
 
      //make sure the level is still in the view
-     QPoint center = getViewCenter();
+     QPoint center = viewCenter();
      QPoint boundedCenter = mEditor->boundPixelToLevel(center);
 
      if (center != boundedCenter)
-         setCenter(boundedCenter, false);
-
-     if (redraw)
+         setViewCenter(boundedCenter);
+     else if (updatesEnabled())
      {
          update();
-         emit viewMoved(getViewBounds());
+         emit viewMoved(viewBounds());
      }
 }
 
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setZoomFactor(float factor, bool redraw /*= true*/)
+QRect EditorWidget::calcBoundsFromCenterAndZoom(const QPoint& c, float _zoomFactor) const
 {
-    mZoomFactor = factor;
-    if (redraw)
-    {
-        update();
-        emit viewMoved(getViewBounds());
-    }
+    QPoint halfSize = QPoint(QWidget::width(), QWidget::height())/(_zoomFactor*2);
+
+    return QRect(c - halfSize, c + halfSize);
 }

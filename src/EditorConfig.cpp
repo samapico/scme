@@ -7,10 +7,7 @@
 EditorConfig::EditorConfig() :
     mGridPens(0),
     mGridSizes(0),
-    mGridSizeCount(0),
-    mMinZoom(0.05852766346593507087334247828075f),
-    mMaxZoom(3.375f),
-    mWheelZoomSpeed(0.004166666666f) //50% per mouse wheel increment (typically delta = 120; 0.50 / 120 = 0.004166666666f)
+    mGridSizeCount(0)
 {
     setDefaultConfig();
 }
@@ -65,6 +62,14 @@ void EditorConfig::setDefaultConfig()
     mGridSizes[4] = 256;
 
     setGridPreset(Grey);
+
+    mWheelZoomSpeed = 0.00208333333f; //25% per mouse wheel increment (typically delta = 120; 0.25 / 120 = 0.00208333333f)
+    mMinZoom = 0.01152921504606846976f; //Power of 1.25
+    mMaxZoom = 4.76837158203125f; //Power of 1.25
+    
+    mSmoothCameraTime = 500;
+
+    mSmoothDragSpeed = 0.0; //Multiplier; 0 disables it
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -126,4 +131,18 @@ float EditorConfig::minZoom() const
 float EditorConfig::maxZoom() const
 {
     return mMaxZoom;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+int EditorConfig::smoothCameraTime() const
+{
+    return mSmoothCameraTime;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+float EditorConfig::smoothDragSpeed() const
+{
+    return mSmoothDragSpeed;
 }
