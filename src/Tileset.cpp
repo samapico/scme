@@ -2,6 +2,10 @@
 
 #include <QtCore/QDebug>
 
+///////////////////////////////////////////////////////////////////////////
+
+using namespace ::SCME;
+
 //////////////////////////////////////////////////////////////////////////
 
 Tileset::Tileset() :
@@ -40,7 +44,7 @@ void Tileset::setDefault()
 
 //////////////////////////////////////////////////////////////////////////
 
-QDataStream& operator>>(QDataStream& in, Tileset& tileset)
+QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
 {
     //         'update the menu's
     //         'TORESTORE

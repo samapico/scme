@@ -38,12 +38,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_Editor.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_Editor.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="Editor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -83,6 +77,12 @@
     <ClCompile Include="GeneratedFiles\qrc_editor.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Editor.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Editor.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Editor.ui">
@@ -121,6 +121,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Tileset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
