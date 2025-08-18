@@ -68,9 +68,15 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
+    <Link>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
+    <Link>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
@@ -104,6 +110,7 @@
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorConfig.cpp" />
     <ClCompile Include="EditorWidget.cpp" />
+    <ClCompile Include="FrameCounter.cpp" />
     <ClCompile Include="LevelData.cpp" />
     <ClCompile Include="LevelObject.cpp" />
     <ClCompile Include="main.cpp" />
@@ -120,6 +127,7 @@
   <ItemGroup>
     <ClInclude Include="appver.h" />
     <ClInclude Include="EditorConfig.h" />
+    <QtMoc Include="FrameCounter.h" />
     <ClInclude Include="Global.h" />
     <ClInclude Include="LevelData.h" />
     <ClInclude Include="LevelObject.h" />

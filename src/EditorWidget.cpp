@@ -7,10 +7,19 @@
 
 #include <QtCore/QPropertyAnimation>
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QTimer>
 
 #include <QtCore/QDebug>
 
 #include "Editor.h"
+#include "FrameCounter.h"
+
+#include <gl/GL.h>
+
+///////////////////////////////////////////////////////////////////////////
+
+#define NO_FPS_LIMIT
+
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -24,19 +33,38 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     mTopLeft(0, 0),
     mZoomFactor(1),
     mTargetZoomFactor(1),
-    mSmoothView(0),
-    mLastSmoothViewStart(0),
     mDragging(false)
 {
     this->setMouseTracking(true);
+
+    mFrameCounter = new FrameCounter(this);
+
+    connect(mFrameCounter, &FrameCounter::framesCounted, this, [this](double fps)
+        {
+            //Force redraw
+            update();
+        });
+
+
+#ifdef NO_FPS_LIMIT
+    QTimer* timerMaxFps = new QTimer(this);
+    timerMaxFps->setTimerType(Qt::TimerType::CoarseTimer);
+    timerMaxFps->setInterval(0);
+    timerMaxFps->setSingleShot(false);
+
+    connect(timerMaxFps, &QTimer::timeout, this, [this]()
+        {
+            update();
+        });
+
+    timerMaxFps->start();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 EditorWidget::~EditorWidget()
 {
-    delete mLastSmoothViewStart;
-    delete mSmoothView;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,43 +86,44 @@ QSize EditorWidget::sizeHint() const
 void EditorWidget::initializeGL()
 {
     QOpenGLWidget::initializeGL();
-    /*
-    qglClearColor(QColor::fromCmykF(0.39, 0.39, 0.0, 0.0));
 
-    //logo = new QtLogo(this, 64);
-    //logo->setColor(qtGreen.dark());
+    //Background color
+    glClearColor(0, 0, 0, 1);
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glShadeModel(GL_FLAT);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_MULTISAMPLE);
-    static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-    */
+    mFrameCounter->start();
 }
 
 //////////////////////////////////////////////////////////////////////////
-/*
+
 void EditorWidget::paintGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    glTranslatef(0.0, 0.0, -10.0);
-    //glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
-    //glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
-    //glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
-    //logo->draw();
+    QOpenGLWidget::paintGL();
+
+    QPainter painter;
+    painter.begin(this);
+
+    if (mEditor->level())
+    {
+        drawGrid(painter);
+
+//#ifdef _DEBUG
+        drawDebug(painter);
+//#endif
+    }
+
+    painter.end();
+
+
+    mFrameCounter->onFrameRendered();
 }
-*/
+
 //////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::resizeGL( int width, int height )
 {
     emit viewMoved(viewBounds());
 
-    //QOpenGLWidget::resizeGL(width, height);
+    QOpenGLWidget::resizeGL(width, height);
     /*
     int side = qMin(width, height);
     glViewport((width - side) / 2, (height - side) / 2, side, side);
@@ -143,7 +172,7 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 
     if (mDragging && mEditor->level())
     {
-        qDebug() << "Drag@ " << event->position();
+        //qDebug() << "Drag@ " << event->position();
         setViewCenterSmooth(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
     }
     else
@@ -164,14 +193,21 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
 
     int scrollDelta = event->hasPixelDelta() ? event->pixelDelta().manhattanLength() : event->angleDelta().y();
 
-    qDebug() << "Wheel@" << event->position() << "; pixelDelta=" << event->pixelDelta() << "; angleDelta=" << event->angleDelta();
-
-    float zoomMultiplier = 1 + (qAbs(scrollDelta) * mEditor->config().wheelZoomSpeed());
+    //qDebug() << "Wheel@" << event->position() << "; pixelDelta=" << event->pixelDelta() << "; angleDelta=" << event->angleDelta();
 
     if (scrollDelta > 0) //zoom in
-        zoomAt(screenToLevelPixel(event->position().toPoint()), zoomMultiplier);
-    else //zoom out
-        zoomAt(screenToLevelPixel(event->position().toPoint()), 1.0f/zoomMultiplier);
+    {
+        mZoomIndex = std::min(mZoomIndex + 1, mEditor->config().zoomIndexMax());
+    }
+    else if (scrollDelta < 0) //zoom out
+    {
+        mZoomIndex = std::max(mZoomIndex - 1, mEditor->config().zoomIndexMin());
+    }
+
+    float zoomMultiplier = mEditor->config().zoomFactorAtIndex(mZoomIndex);
+    qDebug() << "zoomIndex=" << mZoomIndex << "; zoom=" << zoomMultiplier;
+
+    zoomAt(screenToLevelPixel(event->position().toPoint()), zoomMultiplier);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -200,21 +236,7 @@ void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void EditorWidget::paintEvent(QPaintEvent *event)
 {
-    QPainter painter;
-    painter.begin(this);
-
-    painter.fillRect(event->rect(), QColor(Qt::black));
-
-    if (mEditor->level())
-    {
-        drawGrid(painter);
-
-#ifdef _DEBUG
-        drawDebug(painter);
-#endif
-    }
-
-    painter.end();
+    QOpenGLWidget::paintEvent(event);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -250,13 +272,24 @@ void EditorWidget::drawGrid(QPainter& painter)
     if (lastTiley > levelSize.width())
         lastTiley = levelSize.width();
 
+    float pixelsPerTileX = Editor::TILE_WIDTH * mZoomFactor;
+    float pixelsPerTileY = Editor::TILE_HEIGHT * mZoomFactor;
+
+    int minGridSizeX = std::floorf(4.0f / mZoomFactor / Editor::TILE_WIDTH);
+    int minGridSizeY = std::floorf(4.0f / mZoomFactor / Editor::TILE_HEIGHT);
+
     for (int tiley = firstTiley; tiley <= lastTiley; tiley++)
     {
-        int screeny = (tiley*Editor::TILE_HEIGHT - mTopLeft.y())*mZoomFactor;
+        int screeny = levelPixelToScreenY(mEditor->tileToPixelY(tiley));
 
-        painter.setPen(mEditor->config().getGridPen(tiley));
+        int currentGridSize;
 
-        painter.drawLine(screenBounds.left(), screeny, screenBounds.right(), screeny);
+        const QPen* pPen = mEditor->config().getGridPen(tiley, pixelsPerTileY);
+        if (pPen)
+        {
+            painter.setPen(*pPen);
+            painter.drawLine(screenBounds.left(), screeny, screenBounds.right(), screeny);
+        }
     }
 
     //draw vertical grid lines
@@ -272,9 +305,14 @@ void EditorWidget::drawGrid(QPainter& painter)
     {
         int screenx = levelPixelToScreenX(mEditor->tileToPixelX(tilex));
 
-        painter.setPen(mEditor->config().getGridPen(tilex));
+        int currentGridSize;
 
-        painter.drawLine(screenx, screenBounds.top(), screenx, screenBounds.bottom());
+        const QPen* pPen = mEditor->config().getGridPen(tilex, pixelsPerTileX);
+        if (pPen)
+        {
+            painter.setPen(*pPen);
+            painter.drawLine(screenx, screenBounds.top(), screenx, screenBounds.bottom());
+        }
     }
 }
 
@@ -285,10 +323,12 @@ void EditorWidget::drawDebug(QPainter& painter)
     QString str;
 
     painter.setPen(QColor(Qt::green));
-    str = QString("(%1,%2)x%3").arg(
+    str = QString("(%1,%2)x%3/%4 - %5FPS").arg(
         QString::number(mTopLeft.x()),
         QString::number(mTopLeft.y()),
-        QString::number(mZoomFactor, 'f', 3));
+        QString::number(mZoomFactor, 'f', 6),
+        QString::number(mTargetZoomFactor, 'f', 6),
+        QString::number(mFrameCounter->lastFPS(), 'f', 1));
 
     painter.drawText(0, 10, str);
 
@@ -301,21 +341,19 @@ void EditorWidget::drawDebug(QPainter& painter)
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::zoomAt(const QPoint& center, float zoomMultiplier)
+void EditorWidget::zoomAt(const QPoint& center, float newZoomFactor)
 {
     //make sure the level is still in the view
     QPoint targetCenter = mEditor->boundPixelToLevel(center);
     QPoint screenTarget = levelPixelToScreen(targetCenter);
 
-    float newZoomFactor = mTargetZoomFactor * zoomMultiplier;
-
     //upper zoom limit
-    if (newZoomFactor > mEditor->config().maxZoom())
-        newZoomFactor = mEditor->config().maxZoom();
+    if (newZoomFactor > mEditor->config().maxZoomFactor())
+        newZoomFactor = mEditor->config().maxZoomFactor();
 
     //lower limit of zoom
-    if (newZoomFactor < mEditor->config().minZoom())
-        newZoomFactor = mEditor->config().minZoom();
+    if (newZoomFactor < mEditor->config().minZoomFactor())
+        newZoomFactor = mEditor->config().minZoomFactor();
 
     mTargetZoomFactor = newZoomFactor;
 
@@ -326,7 +364,7 @@ void EditorWidget::zoomAt(const QPoint& center, float zoomMultiplier)
 
     newView.translate(boundedViewCenter - newView.center());
 
-    setViewBoundsSmooth(newView, false);
+    setViewBoundsSmooth(newView, false, false);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -355,7 +393,25 @@ float EditorWidget::zoomFactor() const
 void EditorWidget::setViewBounds(const QRect& bounds)
 {
     mTopLeft = bounds.topLeft();
-    mZoomFactor = (float)QWidget::height()/(float)bounds.height();
+
+    int wh = QWidget::height();
+
+    mZoomFactor = (float)wh/(float)bounds.height();
+
+    float zoomFactorApproxA = (float)wh / (float)(bounds.height() - 1);
+    float zoomFactorApproxB = (float)wh / (float)(bounds.height() + 1);
+
+    if (mTargetZoomFactor >= zoomFactorApproxB && mTargetZoomFactor <= zoomFactorApproxA)
+    {
+        //Current zoom is as close as possible to the target zoom, force it to be equal
+        mZoomFactor = mTargetZoomFactor;
+    }
+
+    if (mTargetZoomFactor == 1.0f && mZoomFactor != 1.0f)
+    {
+        int x = 8;
+        x++;
+    }
 
     if (updatesEnabled())
     {
@@ -366,12 +422,36 @@ void EditorWidget::setViewBounds(const QRect& bounds)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation /*= true*/)
+void EditorWidget::setViewBoundsKeepZoom(const QRect& bounds)
+{
+    mTopLeft = bounds.topLeft();
+    //mZoomFactor = (float)QWidget::height() / (float)bounds.height();
+
+    if (updatesEnabled())
+    {
+        update();
+        emit viewMoved(viewBounds());
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setViewBoundsMaybeZoom(const QRect& bounds, bool keepZoom)
+{
+    if (keepZoom)
+        setViewBoundsKeepZoom(bounds);
+    else
+        setViewBounds(bounds);
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation, bool keepZoom)
 {
     if (mSmoothView && mSmoothView->state() == QAbstractAnimation::Running)
     {
         if (forceFinishPreviousAnimation)
-            setViewBounds(mSmoothView->endValue().toRect()); //Jump to the end of the previous transition
+            setViewBoundsMaybeZoom(mSmoothView->endValue().toRect(), mSmoothView->property("keepZoom").toBool()); //Jump to the end of the previous transition
 
         mSmoothView->stop();
     }
@@ -381,19 +461,22 @@ void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPrev
     if (!duration)
     {
         // 0 ms duration; do not bother using an animation
-        setViewBounds(bounds);
+        setViewBoundsMaybeZoom(bounds, keepZoom);
         return;
     }
 
-    if (!mSmoothView)
+    //if (!mSmoothView)
     {
-        mSmoothView = new QPropertyAnimation(this, "viewBounds");
+        mSmoothView = std::make_unique<QPropertyAnimation>(this, keepZoom ? "viewBoundsKeepZoom" : "viewBounds");
     }
 
-    mSmoothView->setEasingCurve(QEasingCurve(QEasingCurve::InOutCubic));
+    mSmoothView->setEasingCurve(QEasingCurve(QEasingCurve::OutCubic));
     mSmoothView->setDuration(mEditor->config().smoothCameraTime());
     mSmoothView->setStartValue(viewBounds());
     mSmoothView->setEndValue(bounds);
+
+    //If true, the zoom will not be recomputed from the bounds
+    mSmoothView->setProperty("keepZoom", keepZoom);
 
     mSmoothView->start();
 }
@@ -415,7 +498,7 @@ void EditorWidget::setViewTopLeft(const QPoint& topLeft)
 
 void EditorWidget::setViewTopLeftSmooth(const QPoint& topLeft)
 {
-    setViewBoundsSmooth(QRect(topLeft, QWidget::size()/mZoomFactor));
+    setViewBoundsSmooth(QRect(topLeft, QWidget::size()/mZoomFactor), true, true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -445,7 +528,7 @@ void EditorWidget::setViewCenterSmooth(const QPoint& centerPixel)
     bool bFinishPreviousAnimation = false;
     if (!mLastSmoothViewStart)
     {
-        mLastSmoothViewStart = new QElapsedTimer;
+        mLastSmoothViewStart = std::make_unique<QElapsedTimer>();
         mLastSmoothViewStart->start();
     }
     else
@@ -455,22 +538,17 @@ void EditorWidget::setViewCenterSmooth(const QPoint& centerPixel)
         bFinishPreviousAnimation = (dt < 100); ///< 10ms minimum animation time?
     }
 
-    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(centerPixel, mZoomFactor), bFinishPreviousAnimation);
+    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(centerPixel, mZoomFactor), bFinishPreviousAnimation, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::setDefaultZoom()
 {
-    setZoomFactor(1.0);
-    mTargetZoomFactor = zoomFactor();
-}
+    mZoomIndex = 0;
+    mZoomFactor = 1.0f;
+    mTargetZoomFactor = 1.0f;
 
-//////////////////////////////////////////////////////////////////////////
-
-void EditorWidget::setZoomFactor(float factor)
-{
-    mZoomFactor = factor;
     if (updatesEnabled())
     {
         update();
@@ -482,7 +560,7 @@ void EditorWidget::setZoomFactor(float factor)
 
 void EditorWidget::setZoomFactorSmooth(float factor)
 {
-    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(viewCenter(), factor));
+    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(viewCenter(), factor), true, false);
 }
 
 //////////////////////////////////////////////////////////////////////////

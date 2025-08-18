@@ -9,10 +9,7 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
-EditorConfig::EditorConfig() :
-    mGridPens(0),
-    mGridSizes(0),
-    mGridSizeCount(0)
+EditorConfig::EditorConfig()
 {
     setDefaultConfig();
 }
@@ -21,58 +18,47 @@ EditorConfig::EditorConfig() :
 
 EditorConfig::~EditorConfig()
 {
-    delete[] mGridPens;
-    delete[] mGridSizes;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-const QPen& EditorConfig::getGridPen(int tile) const
+const QPen* EditorConfig::getGridPen(int tile, float pixelsPerTile) const
 {
-    Q_ASSERT(mGridSizeCount > 0);
+    Q_ASSERT(mGridSizes.count() > 0);
 
-    int i = mGridSizeCount;
+    int i = mGridSizes.count();
 
     while (i)
     {
         --i;
         if (!(tile % mGridSizes[i]))
-            return mGridPens[i];
+        {
+            if (pixelsPerTile * mGridSizes[i] < mMinimumPixelsPerGrid)
+                return nullptr; //Grid too small
+
+            return &mGridPens[i];
+        }
     }
 
-    if (mGridSizeCount)
-        return mGridPens[0];
-    
-    Q_ASSERT(0);
-    return mDefaultPen;
+    //No grid match
+    return nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void EditorConfig::setDefaultConfig()
 {
-    delete[] mGridPens;
-    delete[] mGridSizes;
-
     //Default config
-    mGridSizeCount = 5;
-
-    mGridPens = new QPen[mGridSizeCount];
-    mGridSizes= new int[mGridSizeCount];
-
-    mGridSizes[0] = 1;
-    mGridSizes[1] = 4;
-    mGridSizes[2] = 16;
-    mGridSizes[3] = 64;
-    mGridSizes[4] = 256;
+    mGridSizes = { 1, 4, 16, 64, 256 };
 
     setGridPreset(Grey);
+    Q_ASSERT(mGridSizes.count() == mGridPens.count());
 
-    mWheelZoomSpeed = 0.00208333333f; //25% per mouse wheel increment (typically delta = 120; 0.25 / 120 = 0.00208333333f)
-    mMinZoom = 0.01152921504606846976f; //Power of 1.25
-    mMaxZoom = 4.76837158203125f; //Power of 1.25
-    
-    mSmoothCameraTime = 500;
+    addZoomLevels(1.0f/32.0f, 8.0f, 2.0f);
+
+    mMinimumPixelsPerGrid = 3.75f;
+
+    mSmoothCameraTime = 350;
 
     mSmoothDragSpeed = 0.0; //Multiplier; 0 disables it
 }
@@ -83,17 +69,19 @@ void EditorConfig::setGridPreset(GridPreset preset)
 {
     QColor c;
 
-    for (int i = 0; i < mGridSizeCount; i++)
+    mGridPens.resize(mGridSizes.count());
+
+    for (int i = 0; i < mGridSizes.count(); i++)
     {
         //primary color = 0.5 + 0.5*i/(count-1)
-        float p = qMin(1.0f, 0.5f + 0.5f * ((float)(i)) / (mGridSizeCount - 1));
+        float p = qMin(1.0f, 0.5f + 0.5f * ((float)(i)) / (mGridSizes.count() - 1));
 
         //secondary color = 0 + 0.5*(i-1)/(count-1)
-        float s = qMax(0.0f, 0.5f * ((float)(i))/(mGridSizeCount - 1));
+        float s = qMax(0.0f, 0.5f * ((float)(i))/(mGridSizes.count() - 1));
 
-        float t = qMax(0.0f, 0.25f * ((float)(i-2))/(mGridSizeCount - 1));
+        float t = qMax(0.0f, 0.25f * ((float)(i-2))/(mGridSizes.count() - 1));
 
-        float a = 0.25f + 0.50f * ((float)i / (mGridSizeCount - 1));
+        float a = 0.25f + 0.50f * ((float)i / (mGridSizes.count() - 1));
 
         if (preset == Grey)
             c.setRgbF(p, p, p, a);
@@ -111,7 +99,7 @@ void EditorConfig::setGridPreset(GridPreset preset)
             c.setRgbF(t, s, p, a);
 
         //shift hue and grey it out a bit
-        c.setHsv((c.hue() + (int)(60*((float)(i))/(mGridSizeCount - 1)))%360, c.saturation()*.75, c.value()*.75, a*255);
+        c.setHsv((c.hue() + (int)(60*((float)(i))/(mGridSizes.count() - 1)))%360, c.saturation()*.75, c.value()*.75, a*255);
 
         mGridPens[i].setColor(c);
     }
@@ -119,23 +107,46 @@ void EditorConfig::setGridPreset(GridPreset preset)
 
 //////////////////////////////////////////////////////////////////////////
 
-float EditorConfig::wheelZoomSpeed() const
+float EditorConfig::minZoomFactor() const
 {
-    return mWheelZoomSpeed;
+    return mZoomOutFactors.isEmpty() ? 1.0f : mZoomOutFactors.last();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-float EditorConfig::minZoom() const
+float EditorConfig::maxZoomFactor() const
 {
-    return mMinZoom;
+    return mZoomInFactors.isEmpty() ? 1.0f : mZoomInFactors.last();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-float EditorConfig::maxZoom() const
+float EditorConfig::zoomFactorAtIndex(int zoomIndex) const
 {
-    return mMaxZoom;
+    if (zoomIndex == 0)
+        return 1.0f;
+
+    if (zoomIndex > 0)
+        return zoomIndex > mZoomInFactors.count() ? maxZoomFactor() : mZoomInFactors.at(zoomIndex - 1);
+
+    //zoomIndex is negative
+    zoomIndex = -zoomIndex; //convert to a usable positive index
+
+    return zoomIndex > mZoomOutFactors.count() ? minZoomFactor() : mZoomOutFactors.at(zoomIndex - 1);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+int EditorConfig::zoomIndexMin() const
+{
+    return -mZoomOutFactors.count();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+int EditorConfig::zoomIndexMax() const
+{
+    return mZoomInFactors.count();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -150,4 +161,29 @@ int EditorConfig::smoothCameraTime() const
 float EditorConfig::smoothDragSpeed() const
 {
     return mSmoothDragSpeed;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorConfig::addZoomLevels(float minZoom, float maxZoom, float mult)
+{
+    mZoomOutFactors.clear();
+    mZoomInFactors.clear();
+
+    float z = 1.0f;
+
+    while (z > minZoom)
+    {
+        z /= mult;
+
+        mZoomOutFactors.append(z - 1e-6f < minZoom ? minZoom : z);
+    }
+
+    z = 1.0f;
+    while (z < maxZoom)
+    {
+        z *= mult;
+
+        mZoomInFactors.append(z + 1e-6f > maxZoom ? maxZoom : z);
+    }
 }

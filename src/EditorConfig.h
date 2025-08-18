@@ -3,7 +3,9 @@
 
 #include "Global.h"
 
+#include <QtCore/QVector>
 #include <QtGui/QPen>
+
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -17,8 +19,8 @@ class EditorConfig
 public:
     EditorConfig();
     virtual ~EditorConfig();
-    
-    const QPen& getGridPen(int tile) const;
+
+    const QPen* getGridPen(int tile, float pixelsPerTile) const;
 
     void setDefaultConfig();
 
@@ -36,14 +38,18 @@ public:
     };
     void setGridPreset(GridPreset);
 
-    /// Wheel zoom multiplier
-    float wheelZoomSpeed() const;
-
     /// Lowest possible zoom factor (zoomed out)
-    float minZoom() const;
+    float minZoomFactor() const;
 
     /// Highest possible zoom factor (zoomed in)
-    float maxZoom() const;
+    float maxZoomFactor() const;
+
+    /// Zoom value at a given zoom index, where 0 is no zoom, greater than 0 is a zoom in, and less than 0 is a zoom out
+    float zoomFactorAtIndex(int zoomIndex) const;
+
+    int zoomIndexMin() const;
+
+    int zoomIndexMax() const;
 
     /// Time it takes to complete the transition from one view to another (0 means no smoothing; instant transition)
     int smoothCameraTime() const;
@@ -54,22 +60,19 @@ public:
 
 private:
 
-    //do not allow copy or assignment of this class (not yet supported)
-    EditorConfig(const EditorConfig&);
-    const EditorConfig& operator=(const EditorConfig&);    
+    void addZoomLevels(float minZoom, float maxZoom, float mult);
 
-    int   mGridSizeCount;
-    int * mGridSizes;
-    QPen* mGridPens;
+    QVector<int> mGridSizes;
+    QVector<QPen> mGridPens;
 
-    QPen  mDefaultPen;
+    QPen mDefaultPen;
 
-    float mWheelZoomSpeed;
-    float mMinZoom;
-    float mMaxZoom;
+    QVector<float> mZoomOutFactors;
+    QVector<float> mZoomInFactors;
 
     int   mSmoothCameraTime;
     float mSmoothDragSpeed;
+    float mMinimumPixelsPerGrid;
 };
 
 

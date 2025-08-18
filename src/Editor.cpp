@@ -234,7 +234,7 @@ void Editor::onLevelLoaded()
     {
         if (mLevel)
         {
-            mEditorWidget->setZoomFactor(1.0);
+            mEditorWidget->setDefaultZoom();
             mEditorWidget->setViewCenter(QPoint(levelPixelSize().width() / 2, levelPixelSize().height() / 2));
         }
         else

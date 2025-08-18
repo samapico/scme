@@ -6,6 +6,11 @@
 #include <QtOpenGLWidgets/QOpenGLWidget>
 
 #include <QtCore/QPoint>
+#include <QtCore/QPointF>
+#include <QtCore/QPointer>
+
+#include <memory>
+
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -19,6 +24,8 @@ namespace SCME {
 //////////////////////////////////////////////////////////////////////////
 
 class Editor;
+class FrameCounter;
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -26,9 +33,10 @@ class EditorWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
-    Q_PROPERTY(float zoomFactor READ zoomFactor WRITE setZoomFactor RESET setDefaultZoom)
     Q_PROPERTY(QPoint viewCenter READ viewCenter WRITE setViewCenter)
     Q_PROPERTY(QRect viewBounds READ viewBounds WRITE setViewBounds)
+    Q_PROPERTY(QRect viewBoundsKeepZoom READ viewBounds WRITE setViewBoundsKeepZoom)
+
 public:
     EditorWidget(Editor* editor, QWidget *parent = nullptr);
     virtual ~EditorWidget();
@@ -39,7 +47,7 @@ public:
     /// Reimplemented from QWidget
     QSize sizeHint() const;
 
-    void zoomAt(const QPoint& center, float zoomMultiplier);
+    void zoomAt(const QPoint& center, float newZoomFactor);
 
     QRect viewBounds() const;
 
@@ -59,15 +67,17 @@ public slots:
     /// The "right" element of the rect is ignored, as the height is used to determine the zoom.
     void setViewBounds(const QRect& bounds);
 
-    void setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation = true);
+    void setViewBoundsKeepZoom(const QRect& bounds);
+
+    void setViewBoundsMaybeZoom(const QRect& bounds, bool keepZoom);
+
+    void setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation, bool keepZoom);
 
 
     void setViewCenter(const QPoint& centerPixel);
 
     void setViewCenterSmooth(const QPoint& centerPixel);
 
-
-    void setZoomFactor(float factor);
 
     void setZoomFactorSmooth(float factor);
 
@@ -78,24 +88,24 @@ signals:
     void viewMoved(const QRect& viewBounds);
 
 protected:
-    void initializeGL();
-    //void paintGL();
-    void resizeGL(int width, int height);
+    void initializeGL() override;
+    void paintGL() override;
+    void resizeGL(int width, int height) override;
 
     /// Reimplemented from QWidget
-    void mousePressEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
 
     /// Reimplemented from QWidget
-    void mouseMoveEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event) override;
 
     /// Reimplemented from QWidget
-    void mouseReleaseEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
     /// Reimplemented from QWidget
-    void wheelEvent(QWheelEvent *event);
+    void wheelEvent(QWheelEvent *event) override;
 
     /// Reimplemented from QWidget
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 
     void drawDebug(QPainter& painter);
 
@@ -119,20 +129,27 @@ protected:
 
 private:
 
-    Editor* mEditor;
+    QPointer<Editor> mEditor;
 
-    QPoint mTopLeft;
+    QPointer<FrameCounter> mFrameCounter;
 
-    float mZoomFactor;
-    float mTargetZoomFactor;
+    QPoint mTopLeft{ 0,0 };
+
+    float mZoomFactor = 1.0f;
+    float mTargetZoomFactor = 1.0f;
+
+    // = 0: no zoom
+    // > 0: zoom in
+    // < 0: zoom out
+    int mZoomIndex = 0;
 
     /// temp pan
-    QPoint mDragStart;
-    QPoint mCenterOrig;
-    bool   mDragging;
+    QPoint mDragStart; //in screen coordinates
+    QPoint mCenterOrig; //in level pixel coordinates
+    bool   mDragging = false;
 
-    QPropertyAnimation* mSmoothView;
-    QElapsedTimer*      mLastSmoothViewStart;
+    std::unique_ptr<QPropertyAnimation> mSmoothView;
+    std::unique_ptr<QElapsedTimer>      mLastSmoothViewStart;
 
     QPoint mCursor;
 };
