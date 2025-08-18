@@ -3,7 +3,7 @@
 
 #include "Global.h"
 
-#include <QtOpenGL/QGLWidget>
+#include <QtOpenGLWidgets/QOpenGLWidget>
 
 #include <QtCore/QPoint>
 
@@ -22,7 +22,7 @@ class Editor;
 
 //////////////////////////////////////////////////////////////////////////
 
-class EditorWidget : public QGLWidget
+class EditorWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
@@ -30,7 +30,7 @@ class EditorWidget : public QGLWidget
     Q_PROPERTY(QPoint viewCenter READ viewCenter WRITE setViewCenter)
     Q_PROPERTY(QRect viewBounds READ viewBounds WRITE setViewBounds)
 public:
-    EditorWidget(Editor* editor, QWidget *parent = 0);
+    EditorWidget(Editor* editor, QWidget *parent = nullptr);
     virtual ~EditorWidget();
 
     /// Reimplemented from QWidget
@@ -52,7 +52,7 @@ public:
 public slots:
 
     void setViewTopLeft(const QPoint& topLeft);
-    
+
     void setViewTopLeftSmooth(const QPoint& topLeft);
 
     /// This adjusts both the pan and the zoom.
@@ -63,14 +63,14 @@ public slots:
 
 
     void setViewCenter(const QPoint& centerPixel);
-    
+
     void setViewCenterSmooth(const QPoint& centerPixel);
-    
+
 
     void setZoomFactor(float factor);
-    
+
     void setZoomFactorSmooth(float factor);
-    
+
     void setDefaultZoom();
 
 signals:
@@ -81,7 +81,7 @@ protected:
     void initializeGL();
     //void paintGL();
     void resizeGL(int width, int height);
-    
+
     /// Reimplemented from QWidget
     void mousePressEvent(QMouseEvent *event);
 

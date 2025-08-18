@@ -6,8 +6,8 @@
 
 #include "appver.h"
 
-#include <QtGui/QMessageBox>
-#include <QtGui/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QFileDialog>
 
 #include <QtCore/QString>
 #include <QtCore/QDebug>
@@ -24,7 +24,7 @@ const QSize Editor::TILE_SIZE(16,16);
 
 //////////////////////////////////////////////////////////////////////////
 
-Editor::Editor(QWidget *parent, Qt::WFlags flags) :
+Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
     QMainWindow(parent, flags),
     mEditorWidget(0),
     mThumbnailWidget(0),
@@ -45,20 +45,16 @@ Editor::Editor(QWidget *parent, Qt::WFlags flags) :
 #endif
         ));
 
-    bool bConnect = true;
+    connect(ui.changeGridPreset, &QPushButton::clicked, this, &Editor::toggleGridPreset);
 
-    bConnect &= connect(ui.changeGridPreset, SIGNAL(clicked()), this, SLOT(toggleGridPreset()));
-
-    bConnect &= connect(ui.actionNew    , SIGNAL(triggered()), this, SLOT(newLevel()));
-    bConnect &= connect(ui.actionOpen   , SIGNAL(triggered()), this, SLOT(openLevel()));
-    bConnect &= connect(ui.actionSave   , SIGNAL(triggered()), this, SLOT(saveLevel()));
-    bConnect &= connect(ui.actionSave_As, SIGNAL(triggered()), this, SLOT(saveLevelAs()));
-    bConnect &= connect(ui.actionClose  , SIGNAL(triggered()), this, SLOT(closeLevel()));
+    connect(ui.actionNew    , &QAction::triggered, this, &Editor::newLevel);
+    connect(ui.actionOpen   , &QAction::triggered, this, &Editor::openLevel);
+    connect(ui.actionSave   , &QAction::triggered, this, &Editor::saveLevel);
+    connect(ui.actionSave_As, &QAction::triggered, this, &Editor::saveLevelAs);
+    connect(ui.actionClose  , &QAction::triggered, this, &Editor::closeLevel);
 
     //Create new level
     newLevel();
-    
-    Q_ASSERT(bConnect);
 }
 
 //////////////////////////////////////////////////////////////////////////

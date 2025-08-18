@@ -3,7 +3,7 @@
 
 #include "Global.h"
 
-#include <QtGui/QMainWindow>
+#include <QtWidgets/QMainWindow>
 #include "ui_Editor.h"
 
 #include "EditorConfig.h"
@@ -30,7 +30,7 @@ public:
     static const int TILE_HEIGHT;
     static const QSize TILE_SIZE;
 
-    Editor(QWidget *parent = 0, Qt::WFlags flags = 0);
+    Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
     virtual ~Editor();
 
     /// Size (in tiles) of the current level
@@ -54,9 +54,9 @@ public:
     inline const LevelData* level() const;
 
 public slots:
-    
+
     /// @returns True if the level is closed (or no level is currently loaded),
-    ///          false if the user cancels the operation         
+    ///          false if the user cancels the operation
     bool closeLevel();
 
     void newLevel();

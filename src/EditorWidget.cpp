@@ -1,6 +1,10 @@
 #include "EditorWidget.h"
 
 #include <QtGui/QPaintEvent>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
+#include <QtGui/QPainter>
+
 #include <QtCore/QPropertyAnimation>
 #include <QtCore/QElapsedTimer>
 
@@ -15,7 +19,7 @@ using namespace ::SCME;
 //////////////////////////////////////////////////////////////////////////
 
 EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
-    QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
+    QOpenGLWidget(parent),
     mEditor(editor),
     mTopLeft(0, 0),
     mZoomFactor(1),
@@ -53,7 +57,7 @@ QSize EditorWidget::sizeHint() const
 
 void EditorWidget::initializeGL()
 {
-    QGLWidget::initializeGL();
+    QOpenGLWidget::initializeGL();
     /*
     qglClearColor(QColor::fromCmykF(0.39, 0.39, 0.0, 0.0));
 
@@ -90,7 +94,7 @@ void EditorWidget::resizeGL( int width, int height )
 {
     emit viewMoved(viewBounds());
 
-    //QGLWidget::resizeGL(width, height);
+    //QOpenGLWidget::resizeGL(width, height);
     /*
     int side = qMin(width, height);
     glViewport((width - side) / 2, (height - side) / 2, side, side);
@@ -139,7 +143,7 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 
     if (mDragging && mEditor->level())
     {
-        qDebug() << "Drag@ " << event->posF();
+        qDebug() << "Drag@ " << event->position();
         setViewCenterSmooth(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
     }
     else
@@ -158,12 +162,16 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
     if (mDragging)
         return;
 
-    float zoomMultiplier = 1 + (qAbs(event->delta())*mEditor->config().wheelZoomSpeed());
+    int scrollDelta = event->hasPixelDelta() ? event->pixelDelta().manhattanLength() : event->angleDelta().y();
 
-    if (event->delta() > 0) //zoom in
-        zoomAt(screenToLevelPixel(event->pos()), zoomMultiplier);
+    qDebug() << "Wheel@" << event->position() << "; pixelDelta=" << event->pixelDelta() << "; angleDelta=" << event->angleDelta();
+
+    float zoomMultiplier = 1 + (qAbs(scrollDelta) * mEditor->config().wheelZoomSpeed());
+
+    if (scrollDelta > 0) //zoom in
+        zoomAt(screenToLevelPixel(event->position().toPoint()), zoomMultiplier);
     else //zoom out
-        zoomAt(screenToLevelPixel(event->pos()), 1/zoomMultiplier);
+        zoomAt(screenToLevelPixel(event->position().toPoint()), 1.0f/zoomMultiplier);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -177,7 +185,7 @@ void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
     {
         if (mEditor->config().smoothDragSpeed() > 0)
         {
-            qDebug() << "Release@ " << event->posF();
+            qDebug() << "Release@ " << event->position();
         }
         else if (mSmoothView && mSmoothView->state() == QAbstractAnimation::Running)
         {
@@ -194,13 +202,13 @@ void EditorWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter;
     painter.begin(this);
-    
+
     painter.fillRect(event->rect(), QColor(Qt::black));
 
     if (mEditor->level())
     {
         drawGrid(painter);
-    
+
 #ifdef _DEBUG
         drawDebug(painter);
 #endif
@@ -232,14 +240,14 @@ void EditorWidget::drawGrid(QPainter& painter)
         screenBounds.setRight(levelPixelToScreenX(levelPxSize.width()));
     if (visibleLevelBounds.bottom() > levelPxSize.height())
         screenBounds.setBottom(levelPixelToScreenY(levelPxSize.height()));
-    
+
     //draw horizontal grid lines
     int firstTiley = mEditor->pixelToTileY(visibleLevelBounds.top());
     if (firstTiley < 0)
         firstTiley = 0;
 
     int lastTiley  = mEditor->pixelToTileY(visibleLevelBounds.bottom());
-    if (lastTiley > levelSize.width())    
+    if (lastTiley > levelSize.width())
         lastTiley = levelSize.width();
 
     for (int tiley = firstTiley; tiley <= lastTiley; tiley++)
@@ -281,9 +289,9 @@ void EditorWidget::drawDebug(QPainter& painter)
         QString::number(mTopLeft.x()),
         QString::number(mTopLeft.y()),
         QString::number(mZoomFactor, 'f', 3));
-    
+
     painter.drawText(0, 10, str);
-    
+
     str = QString("(%1,%2)").arg(
         QString::number(mCursor.x()),
         QString::number(mCursor.y()));

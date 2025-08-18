@@ -3,9 +3,13 @@
 
 #include "Global.h"
 
-#include <QtOpenGL/QGLWidget>
+#include <QtOpenGLWidgets/QOpenGLWidget>
 
 #include <QtCore/QPoint>
+#include <QtCore/QPointF>
+#include <QtCore/QRect>
+
+#include <QtGui/QPen>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -18,12 +22,12 @@ class Editor;
 
 //////////////////////////////////////////////////////////////////////////
 
-class ThumbnailWidget : public QGLWidget
+class ThumbnailWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
 public:
-    ThumbnailWidget(Editor* editor, QWidget *parent = 0);
+    ThumbnailWidget(Editor* editor, QWidget *parent = nullptr);
     virtual ~ThumbnailWidget();
 
     QSize minimumSizeHint() const;
@@ -42,7 +46,7 @@ signals:
 protected:
     void initializeGL();
     void resizeGL(int width, int height);
-    
+
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);

@@ -1,6 +1,7 @@
 #include "ThumbnailWidget.h"
 
 #include <QtGui/QPaintEvent>
+#include <QtGui/QPainter>
 
 #include "Editor.h"
 
@@ -12,7 +13,7 @@ using namespace ::SCME;
 //////////////////////////////////////////////////////////////////////////
 
 ThumbnailWidget::ThumbnailWidget(Editor* editor, QWidget *parent) :
-    QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
+    QOpenGLWidget(parent),
     mEditor(editor),
     mThumbnailArea(0, 0, 100, 100),
     mLevelBoundsPen(QColor(Qt::white)),
@@ -46,7 +47,7 @@ QSize ThumbnailWidget::sizeHint() const
 
 void ThumbnailWidget::initializeGL()
 {
-    QGLWidget::initializeGL();
+    QOpenGLWidget::initializeGL();
     /*
     qglClearColor(QColor::fromCmykF(0.39, 0.39, 0.0, 0.0));
 
@@ -174,13 +175,13 @@ void ThumbnailWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter;
     painter.begin(this);
-    
+
     painter.fillRect(event->rect(), QColor(Qt::black));
 
     drawLevelBounds(painter);
 
     drawViewBounds(painter);
-    
+
 #ifdef _DEBUG
     drawDebug(painter);
 #endif
@@ -219,12 +220,12 @@ void ThumbnailWidget::drawViewBounds(QPainter& painter)
 {
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(mViewBoundsPen);
-    
+
     QRectF viewBoundsScreen;
 
     viewBoundsScreen.setLeft((qreal)mThumbnailArea.left() + (qreal)(mViewBounds.left() * mThumbnailScale.x()));
     viewBoundsScreen.setWidth((qreal)(mViewBounds.width()*mThumbnailScale.x()));
-    
+
     viewBoundsScreen.setTop((qreal)mThumbnailArea.top() + (qreal)(mViewBounds.top() * mThumbnailScale.y()));
     viewBoundsScreen.setHeight((qreal)(mViewBounds.height()*mThumbnailScale.y()));
 

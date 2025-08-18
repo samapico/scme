@@ -1,6 +1,7 @@
 #include "Tileset.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QIODevice>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -69,7 +70,7 @@ QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
     //         AddDebug "OpenMap, Tileset found"
     //         AddDebug "OpenMap, " & BitmapHeaderInfoString(BMPInfoHeader)
     //         AddDebug "OpenMap, " & BitmapFileInfoString(bmpFileheader)
-    // 
+    //
     //         If BMPInfoHeader.biBitCount < 8 Then
     //             AddDebug "OpenMap, Tileset is invalid"
     //             MessageBox "Invalid tileset within lvl file!", vbExclamation
@@ -77,7 +78,7 @@ QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
     //             frmGeneral.IsBusy("frmMain" & id & ".OpenMap") = False
     //             Exit Sub
     //         End If
-    
+
     Q_ASSERT(tileset.mInfoHeader.biBitCount >= 8);
 
     in.device()->seek(startPos);

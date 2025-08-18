@@ -24,5 +24,6 @@ bin/*
 lib/*
 *.orig
 *.tmp
+.vs
 src/appver.h
 scripts/buildinfo

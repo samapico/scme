@@ -1,6 +1,6 @@
 #include "Editor.h"
 
-#include <QtGui/QApplication>
+#include <QtWidgets/QApplication>
 
 ///////////////////////////////////////////////////////////////////////////
 

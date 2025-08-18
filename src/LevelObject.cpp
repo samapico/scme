@@ -9,7 +9,7 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
-LevelObject::LevelObject() 
+LevelObject::LevelObject()
 {
 }
 
