@@ -11,6 +11,8 @@
 
 #include <QtGui/QPen>
 
+#include "Coords.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -37,11 +39,11 @@ public slots:
 
     void  redrawThumbnail();
 
-    void  redrawView(const QRect& viewBounds);
+    void  redrawView(const LevelBounds& viewBounds);
 
 signals:
 
-    void  doCenterView(const QPoint& center);
+    void  doCenterView(const LevelCoords& center);
 
 protected:
     void initializeGL();
@@ -64,7 +66,9 @@ protected:
 
 private:
 
-    QPoint  screenToLevelPixel(const QPoint& screenxy);
+    typedef QPointF ThumbnailScreenCoords;
+
+    LevelCoords  screenToLevelPixel(const ThumbnailScreenCoords& screenxy);
 
     Editor* mEditor;
 
@@ -72,7 +76,7 @@ private:
     QRect   mThumbnailArea;
     QPointF mThumbnailScale;
 
-    QRect   mViewBounds;
+    LevelBounds mViewBounds;
 
     QPen    mLevelBoundsPen;
 

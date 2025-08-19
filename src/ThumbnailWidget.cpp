@@ -102,10 +102,10 @@ void ThumbnailWidget::resizeGL( int width, int height )
     }
 
     Q_ASSERT(mEditor);
-    QSize  levelPixelSize = mEditor->levelPixelSize();
+    QSizeF  levelPixelSize = mEditor->levelBounds().size();
 
-    mThumbnailScale = QPointF((qreal)mThumbnailArea.width () / (qreal)mEditor->levelPixelSize().width(),
-                              (qreal)mThumbnailArea.height() / (qreal)mEditor->levelPixelSize().height());
+    mThumbnailScale = QPointF((qreal)mThumbnailArea.width () / levelPixelSize.width(),
+                              (qreal)mThumbnailArea.height() / levelPixelSize.height());
 
     //QGLWidget::resizeGL(width, height);
     /*
@@ -143,7 +143,7 @@ void ThumbnailWidget::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton ||
         event->button() == Qt::MiddleButton)
     {
-        emit doCenterView(screenToLevelPixel(event->pos()));
+        emit doCenterView(screenToLevelPixel(event->position()));
     }
 }
 
@@ -153,7 +153,7 @@ void ThumbnailWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & (Qt::LeftButton | Qt::MiddleButton))
     {
-        emit doCenterView(screenToLevelPixel(event->pos()));
+        emit doCenterView(screenToLevelPixel(event->position()));
     }
 }
 
@@ -241,7 +241,7 @@ void ThumbnailWidget::redrawThumbnail()
 
 //////////////////////////////////////////////////////////////////////////
 
-void ThumbnailWidget::redrawView(const QRect& viewBounds)
+void ThumbnailWidget::redrawView(const LevelBounds& viewBounds)
 {
     mViewBounds = viewBounds;
 
@@ -250,9 +250,9 @@ void ThumbnailWidget::redrawView(const QRect& viewBounds)
 
 //////////////////////////////////////////////////////////////////////////
 
-QPoint ThumbnailWidget::screenToLevelPixel(const QPoint& screenxy)
+LevelCoords ThumbnailWidget::screenToLevelPixel(const ThumbnailScreenCoords& screenxy)
 {
-    QPoint px(
+    LevelCoords px(
         (screenxy.x() - mThumbnailArea.left()) / mThumbnailScale.x(),
         (screenxy.y() - mThumbnailArea.top ()) / mThumbnailScale.y());
 

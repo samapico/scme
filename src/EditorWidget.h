@@ -9,6 +9,8 @@
 #include <QtCore/QPointF>
 #include <QtCore/QPointer>
 
+#include "Coords.h"
+
 #include <memory>
 
 
@@ -33,9 +35,10 @@ class EditorWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
-    Q_PROPERTY(QPoint viewCenter READ viewCenter WRITE setViewCenter)
-    Q_PROPERTY(QRect viewBounds READ viewBounds WRITE setViewBounds)
-    Q_PROPERTY(QRect viewBoundsKeepZoom READ viewBounds WRITE setViewBoundsKeepZoom)
+    //Properties use basic types to make animation interpolation easier
+    Q_PROPERTY(QPointF viewCenter READ viewCenterProp WRITE setViewCenterProp)
+    Q_PROPERTY(QRectF viewBounds READ viewBoundsProp WRITE setViewBoundsProp)
+    Q_PROPERTY(QRectF viewBoundsKeepZoom READ viewBoundsProp WRITE setViewBoundsKeepZoomProp)
 
 public:
     EditorWidget(Editor* editor, QWidget *parent = nullptr);
@@ -47,36 +50,43 @@ public:
     /// Reimplemented from QWidget
     QSize sizeHint() const;
 
-    void zoomAt(const QPoint& center, float newZoomFactor);
+    void zoomAt(const LevelCoords& center, float newZoomFactor);
 
-    QRect viewBounds() const;
+    LevelBounds viewBounds() const;
+    inline QRectF viewBoundsProp() const { return viewBounds(); }
 
-    QPoint viewCenter() const;
+    LevelCoords viewCenter() const;
+    inline QPointF viewCenterProp() const { return viewCenter(); }
+
+    const LevelCoords& viewTopLeft() const;
 
     float zoomFactor() const;
 
-    void alignView(const QPoint& screenPixel, const QPoint& levelPixel);
+    void alignView(const ScreenCoords& screenPixel, const LevelCoords& levelPixel);
 
 public slots:
 
-    void setViewTopLeft(const QPoint& topLeft);
+    void setViewTopLeft(const LevelCoords& topLeft);
 
-    void setViewTopLeftSmooth(const QPoint& topLeft);
+    void setViewTopLeftSmooth(const LevelCoords& topLeft);
 
     /// This adjusts both the pan and the zoom.
     /// The "right" element of the rect is ignored, as the height is used to determine the zoom.
-    void setViewBounds(const QRect& bounds);
+    void setViewBounds(const LevelBounds& bounds);
+    inline void setViewBoundsProp(const QRectF& bounds) { setViewBounds(LevelBounds(bounds)); }
 
-    void setViewBoundsKeepZoom(const QRect& bounds);
+    void setViewBoundsKeepZoom(const LevelBounds& bounds);
+    inline void setViewBoundsKeepZoomProp(const QRectF& bounds) { setViewBoundsKeepZoom(LevelBounds(bounds)); }
 
-    void setViewBoundsMaybeZoom(const QRect& bounds, bool keepZoom);
+    void setViewBoundsMaybeZoom(const LevelBounds& bounds, bool keepZoom);
 
-    void setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation, bool keepZoom);
+    void setViewBoundsSmooth(const LevelBounds& bounds, bool forceFinishPreviousAnimation, bool keepZoom);
 
 
-    void setViewCenter(const QPoint& centerPixel);
+    void setViewCenter(const LevelCoords& centerPixel);
+    inline void setViewCenterProp(const QPointF& centerPixel) { setViewCenter(LevelCoords(centerPixel)); }
 
-    void setViewCenterSmooth(const QPoint& centerPixel);
+    void setViewCenterSmooth(const LevelCoords& centerPixel);
 
 
     void setZoomFactorSmooth(float factor);
@@ -85,7 +95,7 @@ public slots:
 
 signals:
 
-    void viewMoved(const QRect& viewBounds);
+    void viewMoved(const LevelBounds& viewBounds);
 
 protected:
     void initializeGL() override;
@@ -113,27 +123,13 @@ protected:
 
     void drawObjects(QPainter& painter);
 
-    QRect calcBoundsFromCenterAndZoom(const QPoint& c, float _zoomFactor) const;
-
-    inline QRect calcBoundsFromTopLeftAndZoom(const QPoint& topLeft, float _zoomFactor) const  { return QRect(topLeft, QWidget::size()/_zoomFactor); }
-
-    inline int levelPixelToScreenX(int x) const    { return (x - mTopLeft.x())*mZoomFactor; }
-    inline int levelPixelToScreenY(int y) const    { return (y - mTopLeft.y())*mZoomFactor; }
-
-    inline QPoint levelPixelToScreen(const QPoint& xy) const     { return (xy - mTopLeft)*mZoomFactor; }
-
-    inline int screenToLevelPixelX(int screenx) const    { return (screenx / mZoomFactor) + mTopLeft.x(); }
-    inline int screenToLevelPixelY(int screeny) const    { return (screeny / mZoomFactor) + mTopLeft.y(); }
-
-    inline QPoint screenToLevelPixel(const QPoint& screenxy) const     { return (screenxy / mZoomFactor) + mTopLeft; }
-
 private:
 
     QPointer<Editor> mEditor;
 
     QPointer<FrameCounter> mFrameCounter;
 
-    QPoint mTopLeft{ 0,0 };
+    LevelCoords mTopLeft{ 0,0 };
 
     float mZoomFactor = 1.0f;
     float mTargetZoomFactor = 1.0f;
@@ -144,14 +140,14 @@ private:
     int mZoomIndex = 0;
 
     /// temp pan
-    QPoint mDragStart; //in screen coordinates
-    QPoint mCenterOrig; //in level pixel coordinates
+    ScreenCoords mDragStart; //in screen coordinates
+    LevelCoords mCenterOrig; //in level pixel coordinates
     bool   mDragging = false;
 
     std::unique_ptr<QPropertyAnimation> mSmoothView;
     std::unique_ptr<QElapsedTimer>      mLastSmoothViewStart;
 
-    QPoint mCursor;
+    LevelCoords mCursor;
 };
 
 

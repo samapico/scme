@@ -33,7 +33,8 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     mTopLeft(0, 0),
     mZoomFactor(1),
     mTargetZoomFactor(1),
-    mDragging(false)
+    mDragging(false),
+    mDragStart(this, 0, 0)
 {
     this->setMouseTracking(true);
 
@@ -159,7 +160,7 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
     if (!mEditor->level())
         return;
 
-    mDragStart = event->pos();
+    mDragStart = ScreenCoords(this, event);
     mCenterOrig = viewCenter();
     mDragging  = true;
 }
@@ -168,12 +169,12 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
 void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    mCursor = screenToLevelPixel(event->pos());
+    mCursor = ScreenCoords(this, event).toLevel();
 
     if (mDragging && mEditor->level())
     {
         //qDebug() << "Drag@ " << event->position();
-        setViewCenterSmooth(mEditor->boundPixelToLevel(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor)));
+        setViewCenterSmooth(mEditor->boundPixelToLevel(LevelCoords(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor))));
     }
     else
     {
@@ -207,7 +208,7 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
     float zoomMultiplier = mEditor->config().zoomFactorAtIndex(mZoomIndex);
     qDebug() << "zoomIndex=" << mZoomIndex << "; zoom=" << zoomMultiplier;
 
-    zoomAt(screenToLevelPixel(event->position().toPoint()), zoomMultiplier);
+    zoomAt(LevelCoords(ScreenCoords(this, event)), zoomMultiplier);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -246,43 +247,65 @@ void EditorWidget::drawGrid(QPainter& painter)
     painter.setRenderHint(QPainter::Antialiasing, false);
 
     QSize levelSize = mEditor->levelSize();
-    QSize levelPxSize = mEditor->levelPixelSize();
 
     //visible level bounds
-    QRect visibleLevelBounds = viewBounds();
+    LevelBounds visibleLevelBounds = viewBounds();
+
+    LevelBounds entireLevelBounds = mEditor->levelBounds();
+    ScreenCoords levelTopLeftInScreen = entireLevelBounds.topLeft().toScreen(this);
+    ScreenCoords levelBottomRightInScreen = entireLevelBounds.bottomRight().toScreen(this);
 
     //screen bounds in which the grid is to be drawn
     QRect screenBounds(QPoint(0, 0), QSize(QWidget::size()));
     if (visibleLevelBounds.left() < 0)
-        screenBounds.setLeft(levelPixelToScreenX(0));
+        screenBounds.setLeft(levelTopLeftInScreen.x());
     if (visibleLevelBounds.top() < 0)
-        screenBounds.setTop(levelPixelToScreenY(0));
+        screenBounds.setTop(levelTopLeftInScreen.y());
 
-    if (visibleLevelBounds.right() > levelPxSize.width())
-        screenBounds.setRight(levelPixelToScreenX(levelPxSize.width()));
-    if (visibleLevelBounds.bottom() > levelPxSize.height())
-        screenBounds.setBottom(levelPixelToScreenY(levelPxSize.height()));
+    if (visibleLevelBounds.right() > entireLevelBounds.width())
+        screenBounds.setRight(levelBottomRightInScreen.x());
+    if (visibleLevelBounds.bottom() > entireLevelBounds.height())
+        screenBounds.setBottom(levelBottomRightInScreen.y());
 
-    //draw horizontal grid lines
-    int firstTiley = mEditor->pixelToTileY(visibleLevelBounds.top());
+    //Bound to level limits
+    visibleLevelBounds = visibleLevelBounds.intersected(mEditor->levelBounds());
+
+    LevelCoords visibleTopLeft = visibleLevelBounds.topLeft();
+    LevelCoords visibleBottomRight = visibleLevelBounds.bottomRight();
+
+    //first visible complete tile
+    int firstTiley = std::ceil(visibleTopLeft.tileYf());
+    Q_ASSERT(firstTiley >= 0);
     if (firstTiley < 0)
         firstTiley = 0;
 
-    int lastTiley  = mEditor->pixelToTileY(visibleLevelBounds.bottom());
+    int lastTiley = visibleBottomRight.tileY();
+    Q_ASSERT(lastTiley <= levelSize.width());
     if (lastTiley > levelSize.width())
         lastTiley = levelSize.width();
 
-    float pixelsPerTileX = Editor::TILE_WIDTH * mZoomFactor;
-    float pixelsPerTileY = Editor::TILE_HEIGHT * mZoomFactor;
+    int firstTilex = std::ceil(visibleTopLeft.tileXf());
+    Q_ASSERT(firstTilex >= 0);
+    if (firstTilex < 0)
+        firstTilex = 0;
 
-    int minGridSizeX = std::floorf(4.0f / mZoomFactor / Editor::TILE_WIDTH);
-    int minGridSizeY = std::floorf(4.0f / mZoomFactor / Editor::TILE_HEIGHT);
+    int lastTilex = visibleBottomRight.tileX();
+    Q_ASSERT(lastTilex <= levelSize.height());
+    if (lastTilex > levelSize.height())
+        lastTilex = levelSize.height();
 
+    float pixelsPerTileX = TILE_W * mZoomFactor;
+    float pixelsPerTileY = TILE_H * mZoomFactor;
+
+
+    LevelCoords tile = LevelCoords::fromTile(firstTilex, firstTiley);
+
+    //draw horizontal grid lines
     for (int tiley = firstTiley; tiley <= lastTiley; tiley++)
     {
-        int screeny = levelPixelToScreenY(mEditor->tileToPixelY(tiley));
+        tile.setY(LevelCoords::tileToPixel(tiley, TILE_H));
 
-        int currentGridSize;
+        int screeny = tile.toScreen(this).y();
 
         const QPen* pPen = mEditor->config().getGridPen(tiley, pixelsPerTileY);
         if (pPen)
@@ -293,19 +316,11 @@ void EditorWidget::drawGrid(QPainter& painter)
     }
 
     //draw vertical grid lines
-    int firstTilex = mEditor->pixelToTileX(visibleLevelBounds.left());
-    if (firstTilex < 0)
-        firstTilex = 0;
-
-    int lastTilex  = mEditor->pixelToTileX(visibleLevelBounds.right());
-    if (lastTilex > levelSize.height())
-        lastTilex = levelSize.height();
-
     for (int tilex = firstTilex; tilex <= lastTilex; tilex++)
     {
-        int screenx = levelPixelToScreenX(mEditor->tileToPixelX(tilex));
+        tile.setX(LevelCoords::tileToPixel(tilex, TILE_W));
 
-        int currentGridSize;
+        int screenx = tile.toScreen(this).x();
 
         const QPen* pPen = mEditor->config().getGridPen(tilex, pixelsPerTileX);
         if (pPen)
@@ -341,11 +356,11 @@ void EditorWidget::drawDebug(QPainter& painter)
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::zoomAt(const QPoint& center, float newZoomFactor)
+void EditorWidget::zoomAt(const LevelCoords& center, float newZoomFactor)
 {
     //make sure the level is still in the view
-    QPoint targetCenter = mEditor->boundPixelToLevel(center);
-    QPoint screenTarget = levelPixelToScreen(targetCenter);
+    LevelCoords targetCenter = mEditor->boundPixelToLevel(center);
+    ScreenCoords screenTarget(this, targetCenter);
 
     //upper zoom limit
     if (newZoomFactor > mEditor->config().maxZoomFactor())
@@ -357,10 +372,10 @@ void EditorWidget::zoomAt(const QPoint& center, float newZoomFactor)
 
     mTargetZoomFactor = newZoomFactor;
 
-    QRect newView = QRect(targetCenter - (screenTarget / newZoomFactor), QWidget::size()/newZoomFactor);
+    LevelBounds newView = LevelBounds(LevelCoords(targetCenter - (screenTarget / newZoomFactor)), QWidget::size()/newZoomFactor);
 
     //Make sure the view's center is in the level
-    QPoint boundedViewCenter = mEditor->boundPixelToLevel(newView.center());
+    LevelCoords boundedViewCenter = mEditor->boundPixelToLevel(newView.center());
 
     newView.translate(boundedViewCenter - newView.center());
 
@@ -369,16 +384,23 @@ void EditorWidget::zoomAt(const QPoint& center, float newZoomFactor)
 
 //////////////////////////////////////////////////////////////////////////
 
-QRect EditorWidget::viewBounds() const
+LevelBounds EditorWidget::viewBounds() const
 {
-    return calcBoundsFromTopLeftAndZoom(mTopLeft, mZoomFactor);
+    return LevelBounds::fromTopLeftAndZoom(mTopLeft, QWidget::size(), mZoomFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-QPoint EditorWidget::viewCenter() const
+LevelCoords EditorWidget::viewCenter() const
 {
     return viewBounds().center();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+const LevelCoords& EditorWidget::viewTopLeft() const
+{
+    return mTopLeft;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -390,7 +412,7 @@ float EditorWidget::zoomFactor() const
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewBounds(const QRect& bounds)
+void EditorWidget::setViewBounds(const LevelBounds& bounds)
 {
     mTopLeft = bounds.topLeft();
 
@@ -422,10 +444,9 @@ void EditorWidget::setViewBounds(const QRect& bounds)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewBoundsKeepZoom(const QRect& bounds)
+void EditorWidget::setViewBoundsKeepZoom(const LevelBounds& bounds)
 {
     mTopLeft = bounds.topLeft();
-    //mZoomFactor = (float)QWidget::height() / (float)bounds.height();
 
     if (updatesEnabled())
     {
@@ -436,7 +457,7 @@ void EditorWidget::setViewBoundsKeepZoom(const QRect& bounds)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewBoundsMaybeZoom(const QRect& bounds, bool keepZoom)
+void EditorWidget::setViewBoundsMaybeZoom(const LevelBounds& bounds, bool keepZoom)
 {
     if (keepZoom)
         setViewBoundsKeepZoom(bounds);
@@ -446,12 +467,12 @@ void EditorWidget::setViewBoundsMaybeZoom(const QRect& bounds, bool keepZoom)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPreviousAnimation, bool keepZoom)
+void EditorWidget::setViewBoundsSmooth(const LevelBounds& bounds, bool forceFinishPreviousAnimation, bool keepZoom)
 {
     if (mSmoothView && mSmoothView->state() == QAbstractAnimation::Running)
     {
         if (forceFinishPreviousAnimation)
-            setViewBoundsMaybeZoom(mSmoothView->endValue().toRect(), mSmoothView->property("keepZoom").toBool()); //Jump to the end of the previous transition
+            setViewBoundsMaybeZoom(LevelBounds(mSmoothView->endValue().toRectF()), mSmoothView->property("keepZoom").toBool()); //Jump to the end of the previous transition
 
         mSmoothView->stop();
     }
@@ -465,10 +486,7 @@ void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPrev
         return;
     }
 
-    //if (!mSmoothView)
-    {
-        mSmoothView = std::make_unique<QPropertyAnimation>(this, keepZoom ? "viewBoundsKeepZoom" : "viewBounds");
-    }
+    mSmoothView = std::make_unique<QPropertyAnimation>(this, keepZoom ? "viewBoundsKeepZoom" : "viewBounds");
 
     mSmoothView->setEasingCurve(QEasingCurve(QEasingCurve::OutCubic));
     mSmoothView->setDuration(mEditor->config().smoothCameraTime());
@@ -483,7 +501,7 @@ void EditorWidget::setViewBoundsSmooth(const QRect& bounds, bool forceFinishPrev
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewTopLeft(const QPoint& topLeft)
+void EditorWidget::setViewTopLeft(const LevelCoords& topLeft)
 {
     mTopLeft = topLeft;
 
@@ -496,14 +514,14 @@ void EditorWidget::setViewTopLeft(const QPoint& topLeft)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewTopLeftSmooth(const QPoint& topLeft)
+void EditorWidget::setViewTopLeftSmooth(const LevelCoords& topLeft)
 {
-    setViewBoundsSmooth(QRect(topLeft, QWidget::size()/mZoomFactor), true, true);
+    setViewBoundsSmooth(LevelBounds(topLeft, QWidget::size()/mZoomFactor), true, true);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewCenter(const QPoint& centerPixel)
+void EditorWidget::setViewCenter(const LevelCoords& centerPixel)
 {
     mTopLeft.setX(centerPixel.x() - QWidget::width() /(mZoomFactor*2));
     mTopLeft.setY(centerPixel.y() - QWidget::height()/(mZoomFactor*2));
@@ -517,7 +535,7 @@ void EditorWidget::setViewCenter(const QPoint& centerPixel)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::setViewCenterSmooth(const QPoint& centerPixel)
+void EditorWidget::setViewCenterSmooth(const LevelCoords& centerPixel)
 {
     /// The thumbnail widget calls this method on mouse move events, which happen
     /// really fast if you're dragging. If we use 'true' to jump to the end
@@ -538,7 +556,7 @@ void EditorWidget::setViewCenterSmooth(const QPoint& centerPixel)
         bFinishPreviousAnimation = (dt < 100); ///< 10ms minimum animation time?
     }
 
-    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(centerPixel, mZoomFactor), bFinishPreviousAnimation, true);
+    setViewBoundsSmooth(LevelBounds::fromCenterAndZoom(centerPixel, size(), mZoomFactor), bFinishPreviousAnimation, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -560,18 +578,18 @@ void EditorWidget::setDefaultZoom()
 
 void EditorWidget::setZoomFactorSmooth(float factor)
 {
-    setViewBoundsSmooth(calcBoundsFromCenterAndZoom(viewCenter(), factor), true, false);
+    setViewBoundsSmooth(LevelBounds::fromCenterAndZoom(viewCenter(), size(), factor), true, false);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel)
+void EditorWidget::alignView(const ScreenCoords& screenPixel, const LevelCoords& levelPixel)
 {
-     mTopLeft = levelPixel - (screenPixel / mZoomFactor);
+     mTopLeft = LevelCoords(QPointF(levelPixel) - (QPointF(screenPixel) / mZoomFactor));
 
      //make sure the level is still in the view
-     QPoint center = viewCenter();
-     QPoint boundedCenter = mEditor->boundPixelToLevel(center);
+     LevelCoords center = viewCenter();
+     LevelCoords boundedCenter = mEditor->boundPixelToLevel(center);
 
      if (center != boundedCenter)
          setViewCenter(boundedCenter);
@@ -580,13 +598,4 @@ void EditorWidget::alignView(const QPoint& screenPixel, const QPoint& levelPixel
          update();
          emit viewMoved(viewBounds());
      }
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-QRect EditorWidget::calcBoundsFromCenterAndZoom(const QPoint& c, float _zoomFactor) const
-{
-    QPoint halfSize = QPoint(QWidget::width(), QWidget::height())/(_zoomFactor*2);
-
-    return QRect(c - halfSize, c + halfSize);
 }

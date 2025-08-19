@@ -1,5 +1,5 @@
-#ifndef TILE_H
-#define TILE_H
+#ifndef INC_Tile_H
+#define INC_Tile_H
 
 #include "Global.h"
 
@@ -30,4 +30,4 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // TILE_H
+#endif // INC_Tile_H

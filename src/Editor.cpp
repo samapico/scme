@@ -18,12 +18,6 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
-const int Editor::TILE_WIDTH(16);
-const int Editor::TILE_HEIGHT(16);
-const QSize Editor::TILE_SIZE(16,16);
-
-//////////////////////////////////////////////////////////////////////////
-
 Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
     QMainWindow(parent, flags),
     mEditorWidget(0),
@@ -65,21 +59,9 @@ Editor::~Editor()
 
 //////////////////////////////////////////////////////////////////////////
 
-QPoint Editor::boundPixelToLevel(const QPoint& pixel) const
+LevelCoords Editor::boundPixelToLevel(const LevelCoords& pixel) const
 {
-    QPoint bounded = pixel;
-
-    if (bounded.x() < 0)
-        bounded.setX(0);
-    else if (bounded.x() > levelPixelSize().width())
-        bounded.setX(levelPixelSize().width());
-
-    if (bounded.y() < 0)
-        bounded.setY(0);
-    else if (bounded.y() > levelPixelSize().height())
-        bounded.setY(levelPixelSize().height());
-
-    return bounded;
+    return mLevelBounds.bounded(pixel);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -120,8 +102,8 @@ void Editor::initRadar()
         mThumbnailWidget = new ThumbnailWidget(this);
 
         Q_ASSERT(mEditorWidget);
-        connect(mThumbnailWidget, SIGNAL(doCenterView(const QPoint&)), mEditorWidget, SLOT(setViewCenterSmooth(const QPoint&)));
-        connect(mEditorWidget, SIGNAL(viewMoved(const QRect&)), mThumbnailWidget, SLOT(redrawView(const QRect&)));
+        connect(mThumbnailWidget, &ThumbnailWidget::doCenterView, mEditorWidget, &EditorWidget::setViewCenterSmooth);
+        connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawView);
 
         ui.dockRadar->setWidget(mThumbnailWidget);
     }
@@ -222,9 +204,9 @@ bool Editor::closeLevel()
 void Editor::onLevelLoaded()
 {
     if (mLevel)
-        mLevelPixelSize = QSize(mLevel->size().width() * TILE_WIDTH, mLevel->size().height() * TILE_HEIGHT);
+        mLevelBounds = LevelBounds(LevelCoords(0, 0), QSizeF(mLevel->size().width() * TILE_W, mLevel->size().height() * TILE_H));
     else
-        mLevelPixelSize = QSize(0,0);
+        mLevelBounds = LevelBounds();
 
     initEditorWidget();
     initTileset();
@@ -235,7 +217,7 @@ void Editor::onLevelLoaded()
         if (mLevel)
         {
             mEditorWidget->setDefaultZoom();
-            mEditorWidget->setViewCenter(QPoint(levelPixelSize().width() / 2, levelPixelSize().height() / 2));
+            mEditorWidget->setViewCenter(mLevelBounds.center());
         }
         else
         {

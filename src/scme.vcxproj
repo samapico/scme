@@ -107,6 +107,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Coords.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorConfig.cpp" />
     <ClCompile Include="EditorWidget.cpp" />
@@ -126,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="appver.h" />
+    <ClInclude Include="Coords.h" />
     <ClInclude Include="EditorConfig.h" />
     <QtMoc Include="FrameCounter.h" />
     <ClInclude Include="Global.h" />

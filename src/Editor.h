@@ -7,6 +7,7 @@
 #include "ui_Editor.h"
 
 #include "EditorConfig.h"
+#include "Coords.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -26,10 +27,6 @@ class Editor : public QMainWindow
 
 public:
 
-    static const int TILE_WIDTH;
-    static const int TILE_HEIGHT;
-    static const QSize TILE_SIZE;
-
     Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
     virtual ~Editor();
 
@@ -37,19 +34,11 @@ public:
     QSize levelSize() const;
 
     /// Size (in pixels) of the current level
-    inline const QSize& levelPixelSize() const;
+    inline const LevelBounds& levelBounds() const;
 
     inline const EditorConfig& config() const;
 
-    inline int    pixelToTileX(int pixel) const;
-    inline int    pixelToTileY(int pixel) const;
-    inline QPoint pixelToTile (const QPoint& pixel) const;
-
-    inline int    tileToPixelX(int tile) const;
-    inline int    tileToPixelY(int tile) const;
-    inline QPoint tileToPixel (const QPoint& tile) const;
-
-    QPoint boundPixelToLevel(const QPoint& pixel) const;
+    LevelCoords boundPixelToLevel(const LevelCoords& pixel) const;
 
     inline const LevelData* level() const;
 
@@ -82,7 +71,7 @@ private:
     Ui::EditorClass ui;
 
     EditorConfig mConfig;
-    QSize mLevelPixelSize;
+    LevelBounds mLevelBounds; //Entire level bounds (in pixels)
 
     LevelData*       mLevel;
 
@@ -90,56 +79,13 @@ private:
     ThumbnailWidget* mThumbnailWidget;
 };
 
+//////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
 
-int Editor::pixelToTileX(int pixel) const
+const LevelBounds& Editor::levelBounds() const
 {
-    return pixel / TILE_WIDTH;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-int Editor::pixelToTileY(int pixel) const
-{
-    return pixel / TILE_HEIGHT;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-QPoint Editor::pixelToTile(const QPoint& pixel) const
-{
-    return QPoint(pixel.x() / TILE_WIDTH, pixel.y() / TILE_HEIGHT);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-int Editor::tileToPixelX(int tile) const
-{
-    return tile*TILE_WIDTH;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-int Editor::tileToPixelY(int tile) const
-{
-    return tile*TILE_HEIGHT;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-QPoint Editor::tileToPixel(const QPoint& tile) const
-{
-    return QPoint(tile.x() * TILE_WIDTH, tile.y() * TILE_HEIGHT);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////
-
-const QSize& Editor::levelPixelSize() const
-{
-    return mLevelPixelSize;
+    return mLevelBounds;
 }
 
 //////////////////////////////////////////////////////////////////////////
