@@ -11,6 +11,7 @@ using namespace ::SCME;
 
 EditorConfig::EditorConfig()
 {
+    mDefaultPen.setColor(QColor(0, 0, 0, 0));
     setDefaultConfig();
 }
 
@@ -22,7 +23,7 @@ EditorConfig::~EditorConfig()
 
 //////////////////////////////////////////////////////////////////////////
 
-const QPen* EditorConfig::getGridPen(int tile, float pixelsPerTile) const
+QPen EditorConfig::getGridPen(int tile, float pixelsPerTile) const
 {
     Q_ASSERT(mGridSizes.count() > 0);
 
@@ -33,15 +34,34 @@ const QPen* EditorConfig::getGridPen(int tile, float pixelsPerTile) const
         --i;
         if (!(tile % mGridSizes[i]))
         {
-            if (pixelsPerTile * mGridSizes[i] < mMinimumPixelsPerGrid)
-                return nullptr; //Grid too small
+            QPen pen = mGridPens[i];
+            QColor c = pen.color();
 
-            return &mGridPens[i];
+            float pixelsPerGrid = pixelsPerTile * mGridSizes[i];
+
+            if (pixelsPerGrid <= mPixelsPerGridFadeIn)
+            {
+                //Grid too small
+                c.setAlpha(0);
+                pen.setColor(c);
+            }
+            else if (pixelsPerGrid >= mPixelsPerGridFadeOut)
+            {
+                //Keep alpha as is
+            }
+            else
+            {
+                //Interpolate alpha between its original value and 0
+                c.setAlphaF(c.alphaF() * (pixelsPerGrid - mPixelsPerGridFadeIn) / (mPixelsPerGridFadeOut - mPixelsPerGridFadeIn));
+                pen.setColor(c);
+            }
+
+            return pen;
         }
     }
 
     //No grid match
-    return nullptr;
+    return mDefaultPen;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -56,7 +76,8 @@ void EditorConfig::setDefaultConfig()
 
     addZoomLevels(1.0f/32.0f, 8.0f, 2.0f);
 
-    mMinimumPixelsPerGrid = 3.75f;
+    mPixelsPerGridFadeIn = 2.75f;
+    mPixelsPerGridFadeOut = 4.0f;
 
     mSmoothCameraTime = 350;
 

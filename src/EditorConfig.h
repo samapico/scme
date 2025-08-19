@@ -20,7 +20,7 @@ public:
     EditorConfig();
     virtual ~EditorConfig();
 
-    const QPen* getGridPen(int tile, float pixelsPerTile) const;
+    QPen getGridPen(int tile, float pixelsPerTile) const;
 
     void setDefaultConfig();
 
@@ -72,7 +72,8 @@ private:
 
     int   mSmoothCameraTime;
     float mSmoothDragSpeed;
-    float mMinimumPixelsPerGrid;
+    float mPixelsPerGridFadeIn; //0% opacity if pixels per grid is <= this value
+    float mPixelsPerGridFadeOut; //100% opacity if pixels per grid is >= this value
 };
 
 

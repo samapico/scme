@@ -169,12 +169,12 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
 void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    mCursor = ScreenCoords(this, event).toLevel();
+    mCursor = mEditor->boundPixelToLevel(ScreenCoords(this, event).toLevel());
 
     if (mDragging && mEditor->level())
     {
         //qDebug() << "Drag@ " << event->position();
-        setViewCenterSmooth(mEditor->boundPixelToLevel(LevelCoords(mCenterOrig - ((event->pos() - mDragStart) / mZoomFactor))));
+        setViewCenterSmooth(mEditor->boundPixelToLevel(LevelCoords(mCenterOrig - ((event->position() - mDragStart) / mZoomFactor))));
     }
     else
     {
@@ -307,10 +307,10 @@ void EditorWidget::drawGrid(QPainter& painter)
 
         int screeny = tile.toScreen(this).y();
 
-        const QPen* pPen = mEditor->config().getGridPen(tiley, pixelsPerTileY);
-        if (pPen)
+        QPen pen = mEditor->config().getGridPen(tiley, pixelsPerTileY);
+        if (pen.color().alpha() > 0)
         {
-            painter.setPen(*pPen);
+            painter.setPen(pen);
             painter.drawLine(screenBounds.left(), screeny, screenBounds.right(), screeny);
         }
     }
@@ -322,10 +322,10 @@ void EditorWidget::drawGrid(QPainter& painter)
 
         int screenx = tile.toScreen(this).x();
 
-        const QPen* pPen = mEditor->config().getGridPen(tilex, pixelsPerTileX);
-        if (pPen)
+        QPen pen = mEditor->config().getGridPen(tilex, pixelsPerTileX);
+        if (pen.color().alpha() > 0)
         {
-            painter.setPen(*pPen);
+            painter.setPen(pen);
             painter.drawLine(screenx, screenBounds.top(), screenx, screenBounds.bottom());
         }
     }
@@ -347,9 +347,11 @@ void EditorWidget::drawDebug(QPainter& painter)
 
     painter.drawText(0, 10, str);
 
-    str = QString("(%1,%2)").arg(
-        QString::number(mCursor.x()),
-        QString::number(mCursor.y()));
+    str = QString("(%1,%2) - (%3,%4)").arg(
+        QString::number(mCursor.x(), 'f', 1),
+        QString::number(mCursor.y(), 'f', 1),
+        QString::number(mCursor.tileX()),
+        QString::number(mCursor.tileY()));
 
     painter.drawText(0, 30, str);
 }
