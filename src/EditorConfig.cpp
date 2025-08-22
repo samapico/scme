@@ -88,9 +88,12 @@ void EditorConfig::setDefaultConfig()
 
 void EditorConfig::setGridPreset(GridPreset preset)
 {
-    QColor c;
-
     mGridPens.resize(mGridSizes.count());
+
+    if (preset == Custom)
+    {
+        return;
+    }
 
     for (int i = 0; i < mGridSizes.count(); i++)
     {
@@ -104,20 +107,32 @@ void EditorConfig::setGridPreset(GridPreset preset)
 
         float a = 0.25f + 0.50f * ((float)i / (mGridSizes.count() - 1));
 
-        if (preset == Grey)
+        QColor c;
+
+        switch (preset)
+        {
+        case Grey:
             c.setRgbF(p, p, p, a);
-        else if (preset == RG)
+            break;
+        case RG:
             c.setRgbF(p, s, t, a);
-        else if (preset == RB)
+            break;
+        case RB:
             c.setRgbF(p, t, s, a);
-        else if (preset == GR)
+            break;
+        case GR:
             c.setRgbF(s, p, t, a);
-        else if (preset == GB)
+            break;
+        case GB:
             c.setRgbF(t, p, s, a);
-        else if (preset == BR)
+            break;
+        case BR:
             c.setRgbF(s, t, p, a);
-        else //BG
+            break;
+        case BG:
             c.setRgbF(t, s, p, a);
+            break;
+        }
 
         //shift hue and grey it out a bit
         c.setHsv((c.hue() + (int)(60*((float)(i))/(mGridSizes.count() - 1)))%360, c.saturation()*.75, c.value()*.75, a*255);

@@ -1,5 +1,5 @@
-#ifndef TILESET_H
-#define TILESET_H
+#ifndef INC_Tileset_H
+#define INC_Tileset_H
 
 #include "Global.h"
 
@@ -103,4 +103,4 @@ protected:
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // TILESET_H
+#endif // INC_Tileset_H

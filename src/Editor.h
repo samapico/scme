@@ -1,5 +1,5 @@
-#ifndef EDITOR_H
-#define EDITOR_H
+#ifndef INC_Editor_H
+#define INC_Editor_H
 
 #include "Global.h"
 
@@ -39,6 +39,8 @@ public:
     inline const EditorConfig& config() const;
 
     LevelCoords boundPixelToLevel(const LevelCoords& pixel) const;
+
+    ScreenCoords boundScreenPixelToLevel(const ScreenCoords& screenPixel) const;
 
     inline const LevelData* level() const;
 
@@ -109,4 +111,5 @@ const LevelData* Editor::level() const
 
 //////////////////////////////////////////////////////////////////////////
 
-#endif // EDITOR_H
+#endif // INC_Editor_H
+

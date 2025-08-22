@@ -66,9 +66,23 @@ LevelCoords Editor::boundPixelToLevel(const LevelCoords& pixel) const
 
 //////////////////////////////////////////////////////////////////////////
 
+ScreenCoords Editor::boundScreenPixelToLevel(const ScreenCoords& screenPixel) const
+{
+    LevelCoords level = screenPixel.toLevel();
+
+    LevelCoords levelBounded = boundPixelToLevel(level);
+
+    if (level != levelBounded)
+        return levelBounded.toScreen(mEditorWidget);
+
+    return screenPixel;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void Editor::toggleGridPreset()
 {
-    static int gridPreset_s = -1;
+    static int gridPreset_s = EditorConfig::Grey;
 
     gridPreset_s++;
     gridPreset_s %= EditorConfig::GridPresetCount;
@@ -102,8 +116,8 @@ void Editor::initRadar()
         mThumbnailWidget = new ThumbnailWidget(this);
 
         Q_ASSERT(mEditorWidget);
-        connect(mThumbnailWidget, &ThumbnailWidget::doCenterView, mEditorWidget, &EditorWidget::setViewCenterSmooth);
-        connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawView);
+        connect(mThumbnailWidget, &ThumbnailWidget::doCenterView, mEditorWidget, &EditorWidget::setViewCenterSmooth, Qt::QueuedConnection);
+        connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawView, Qt::QueuedConnection);
 
         ui.dockRadar->setWidget(mThumbnailWidget);
     }

@@ -1,12 +1,11 @@
-#ifndef Coords_H
-#define Coords_H
+#ifndef INC_Coords_H
+#define INC_Coords_H
 
 #include "Global.h"
 
 #include <QtCore/QPointF>
 #include <QtCore/QRectF>
 #include <QtCore/QSizeF>
-#include <QMetaType>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -36,6 +35,12 @@ public:
 
     static constexpr inline float screenToLevel(float screenPixel, float screenFirstLevelCoord, float zoomFactor) { return screenPixel / zoomFactor + screenFirstLevelCoord; }
 
+    ScreenCoords() :
+        QPointF(),
+        mWidget(nullptr)
+    {
+    }
+
     ScreenCoords(const EditorWidget* w, const QPointF& xy) :
         QPointF(xy),
         mWidget(w)
@@ -55,8 +60,16 @@ public:
     /// Copy constructor
     ScreenCoords(const ScreenCoords& orig) : ScreenCoords(orig.mWidget, orig) {}
 
+    /// (x,y) coordinate in the screen as a ratio from 0 to 1
+    QPointF uv() const;
+
+    QSize screenSize() const;
+
     /// Screen coordinates to level coordinates
     LevelCoords toLevel() const;
+
+    /// Bound screen coordinate to the edges of the level
+    ScreenCoords boundToLevel() const;
 
 private:
 
@@ -151,6 +164,22 @@ public:
 
         return LevelBounds(LevelCoords(center - halfSize), LevelCoords(center + halfSize));
     }
+
+    static LevelBounds fromTargetAndZoom(const LevelCoords& target, const QPointF& targetPosUV, const QSize& size, float zoomFactor)
+    {
+        qreal w = size.width() / zoomFactor;
+        qreal h = size.height() / zoomFactor;
+
+        qreal left = target.pixelXf() - (targetPosUV.x() * w);
+        qreal right = target.pixelXf() + ((1 - targetPosUV.x()) * w);
+
+        qreal top = target.pixelYf() - (targetPosUV.y() * h);
+        qreal bottom = target.pixelYf() + ((1 - targetPosUV.y()) * h);
+
+        QPointF halfSize = QPointF(size.width(), size.height()) * 0.5 / zoomFactor;
+
+        return LevelBounds(QRectF(QPointF(left, top), QPointF(right, bottom)));
+    }
 };
 
 
@@ -158,10 +187,6 @@ public:
 
 } // End namespace SCME
 
-Q_DECLARE_METATYPE(SCME::ScreenCoords);
-Q_DECLARE_METATYPE(SCME::LevelCoords);
-Q_DECLARE_METATYPE(SCME::LevelBounds);
-
 //////////////////////////////////////////////////////////////////////////
 
-#endif // Coords_H
+#endif // INC_Coords_H

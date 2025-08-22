@@ -1,5 +1,5 @@
-#ifndef LEVELOBJECT_H
-#define LEVELOBJECT_H
+#ifndef INC_LevelObject_H
+#define INC_LevelObject_H
 
 #include "Global.h"
 
@@ -27,4 +27,4 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // LEVELOBJECT_H
+#endif // INC_LevelObject_H

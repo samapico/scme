@@ -1,15 +1,17 @@
-#ifndef EDITORWIDGET_H
-#define EDITORWIDGET_H
+#ifndef INC_EditorWidget_H
+#define INC_EditorWidget_H
 
 #include "Global.h"
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
 
+#include <QtCore/QParallelAnimationGroup>
 #include <QtCore/QPoint>
 #include <QtCore/QPointF>
 #include <QtCore/QPointer>
 
 #include "Coords.h"
+#include "ViewBounds.h"
 
 #include <memory>
 
@@ -36,9 +38,7 @@ class EditorWidget : public QOpenGLWidget
     Q_OBJECT
 
     //Properties use basic types to make animation interpolation easier
-    Q_PROPERTY(QPointF viewCenter READ viewCenterProp WRITE setViewCenterProp)
-    Q_PROPERTY(QRectF viewBounds READ viewBoundsProp WRITE setViewBoundsProp)
-    Q_PROPERTY(QRectF viewBoundsKeepZoom READ viewBoundsProp WRITE setViewBoundsKeepZoomProp)
+    Q_PROPERTY(SmoothViewBounds viewBoundsAndZoom READ viewBoundsAndZoom WRITE setViewBoundsAndZoom)
 
 public:
     EditorWidget(Editor* editor, QWidget *parent = nullptr);
@@ -50,48 +50,38 @@ public:
     /// Reimplemented from QWidget
     QSize sizeHint() const;
 
+    /// Centers view at \a center
     void zoomAt(const LevelCoords& center, float newZoomFactor);
 
+    void zoomTowards(const LevelCoords& targetLevel, const ScreenCoords& screenTarget, float newZoomFactor);
+
     LevelBounds viewBounds() const;
-    inline QRectF viewBoundsProp() const { return viewBounds(); }
+
+    SmoothViewBounds viewBoundsAndZoom() const;
 
     LevelCoords viewCenter() const;
-    inline QPointF viewCenterProp() const { return viewCenter(); }
 
-    const LevelCoords& viewTopLeft() const;
+    LevelCoords viewTopLeft() const;
 
     float zoomFactor() const;
 
-    void alignView(const ScreenCoords& screenPixel, const LevelCoords& levelPixel);
+    ScreenCoords screenCenter() const;
 
 public slots:
 
-    void setViewTopLeft(const LevelCoords& topLeft);
-
-    void setViewTopLeftSmooth(const LevelCoords& topLeft);
-
-    /// This adjusts both the pan and the zoom.
-    /// The "right" element of the rect is ignored, as the height is used to determine the zoom.
-    void setViewBounds(const LevelBounds& bounds);
-    inline void setViewBoundsProp(const QRectF& bounds) { setViewBounds(LevelBounds(bounds)); }
-
-    void setViewBoundsKeepZoom(const LevelBounds& bounds);
-    inline void setViewBoundsKeepZoomProp(const QRectF& bounds) { setViewBoundsKeepZoom(LevelBounds(bounds)); }
-
-    void setViewBoundsMaybeZoom(const LevelBounds& bounds, bool keepZoom);
-
-    void setViewBoundsSmooth(const LevelBounds& bounds, bool forceFinishPreviousAnimation, bool keepZoom);
-
-
     void setViewCenter(const LevelCoords& centerPixel);
-    inline void setViewCenterProp(const QPointF& centerPixel) { setViewCenter(LevelCoords(centerPixel)); }
 
-    void setViewCenterSmooth(const LevelCoords& centerPixel);
-
-
-    void setZoomFactorSmooth(float factor);
+    void setZoomFactor(float zoomFactor);
 
     void setDefaultZoom();
+
+    void setViewCenterSmooth(const LevelCoords& targetCenter);
+
+    void setViewTargetSmooth(const LevelCoords& targetLevel, const ScreenCoords& targetScreen);
+
+    void setViewTargetAndZoomSmooth(const LevelCoords& targetLevel, const ScreenCoords& targetScreen, float targetZoom);
+
+    void setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom);
 
 signals:
 
@@ -129,7 +119,8 @@ private:
 
     QPointer<FrameCounter> mFrameCounter;
 
-    LevelCoords mTopLeft{ 0,0 };
+    //LevelCoords mTopLeft{ 0,0 };
+    LevelCoords mCenter{ 0,0 };
 
     float mZoomFactor = 1.0f;
     float mTargetZoomFactor = 1.0f;
@@ -144,8 +135,8 @@ private:
     LevelCoords mCenterOrig; //in level pixel coordinates
     bool   mDragging = false;
 
-    std::unique_ptr<QPropertyAnimation> mSmoothView;
-    std::unique_ptr<QElapsedTimer>      mLastSmoothViewStart;
+    QPointer<QPropertyAnimation> mSmoothView;
+    bool mSmoothViewStopPan = false;
 
     LevelCoords mCursor;
 };
@@ -158,4 +149,4 @@ private:
 ///////////////////////////////////////////////////////////////////////////
 
 
-#endif // EDITORWIDGET_H
+#endif // INC_EditorWidget_H

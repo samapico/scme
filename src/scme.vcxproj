@@ -107,6 +107,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Array2D.cpp" />
     <ClCompile Include="Coords.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorConfig.cpp" />
@@ -117,7 +118,9 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ThumbnailWidget.cpp" />
     <ClCompile Include="Tile.cpp" />
+    <ClCompile Include="TileInfo.cpp" />
     <ClCompile Include="Tileset.cpp" />
+    <ClCompile Include="ViewBounds.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Editor.h" />
@@ -127,8 +130,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="appver.h" />
+    <ClInclude Include="Array2D.h" />
     <ClInclude Include="Coords.h" />
     <ClInclude Include="EditorConfig.h" />
+    <ClInclude Include="TileInfo.h" />
+    <ClInclude Include="ViewBounds.h" />
     <QtMoc Include="FrameCounter.h" />
     <ClInclude Include="Global.h" />
     <ClInclude Include="LevelData.h" />

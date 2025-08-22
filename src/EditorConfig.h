@@ -1,5 +1,5 @@
-#ifndef EDITORCONFIG_H
-#define EDITORCONFIG_H
+#ifndef INC_EditorConfig_H
+#define INC_EditorConfig_H
 
 #include "Global.h"
 
@@ -18,7 +18,7 @@ class EditorConfig
 
 public:
     EditorConfig();
-    virtual ~EditorConfig();
+    ~EditorConfig();
 
     QPen getGridPen(int tile, float pixelsPerTile) const;
 
@@ -33,6 +33,8 @@ public:
         GB,
         BR,
         BG,
+
+        Custom,
 
         GridPresetCount
     };
@@ -81,4 +83,4 @@ private:
 
 } // End namespace SCME
 
-#endif // EDITORCONFIG_H
+#endif // INC_EditorConfig_H

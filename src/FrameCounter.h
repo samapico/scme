@@ -1,5 +1,5 @@
-#ifndef FrameCounter_H
-#define FrameCounter_H
+#ifndef INC_FrameCounter_H
+#define INC_FrameCounter_H
 
 
 #include <QtCore/QObject>
@@ -59,4 +59,4 @@ private:
 ///////////////////////////////////////////////////////////////////////////
 
 
-#endif // FrameCounter_H
+#endif // INC_FrameCounter_H

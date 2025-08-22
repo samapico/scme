@@ -17,7 +17,7 @@ ThumbnailWidget::ThumbnailWidget(Editor* editor, QWidget *parent) :
     mEditor(editor),
     mThumbnailArea(0, 0, 100, 100),
     mLevelBoundsPen(QColor(Qt::white)),
-    mViewBoundsPen (QColor(Qt::red  ))
+    mViewBoundsPen (QColor(255, 0, 0, 128))
 {
     setMouseTracking(true);
 }
@@ -230,6 +230,16 @@ void ThumbnailWidget::drawViewBounds(QPainter& painter)
     viewBoundsScreen.setHeight((qreal)(mViewBounds.height()*mThumbnailScale.y()));
 
     painter.drawRect(viewBoundsScreen);
+
+    /// Draw a crosshair in the center of the view area if the edges are not all visible
+    if (viewBoundsScreen.left() < 0 || viewBoundsScreen.right() >= width() ||
+        viewBoundsScreen.top() < 0 || viewBoundsScreen.bottom() >= height())
+    {
+        constexpr qreal crosshairSize = 8;
+        QPointF c = viewBoundsScreen.center();
+        painter.drawLine(c - QPointF(crosshairSize, 0), c + QPointF(crosshairSize, 0));
+        painter.drawLine(c - QPointF(0, crosshairSize), c + QPointF(0, crosshairSize));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

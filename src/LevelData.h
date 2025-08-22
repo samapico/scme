@@ -1,10 +1,11 @@
-#ifndef LEVELDATA_H
-#define LEVELDATA_H
+#ifndef INC_LevelData_H
+#define INC_LevelData_H
 
 //////////////////////////////////////////////////////////////////////////
 
 #include "Global.h"
 
+#include "Array2D.h"
 #include "Tile.h"
 #include "Tileset.h"
 
@@ -37,26 +38,24 @@ public:
 
     bool isDirty() const;
 
-    inline const QSize& size() const;
+    inline QSize size() const;
 
 protected:
 
     bool load(QDataStream& in);
 
-    Tile* mTiles;
-    mutable bool mIsDirty;
+    Array2D<Tile> mTiles;
+    mutable bool mIsDirty = false;
 
     Tileset mTileset;
-
-    QSize mSize;
 };
 
 
 //////////////////////////////////////////////////////////////////////////
 
-const QSize& LevelData::size() const
+QSize LevelData::size() const
 {
-    return mSize;
+    return mTiles.size();
 }
 
 
@@ -66,4 +65,4 @@ const QSize& LevelData::size() const
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // LEVELDATA_H
+#endif // INC_LevelData_H

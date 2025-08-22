@@ -1,5 +1,5 @@
-#ifndef THUMBNAILWIDGET_H
-#define THUMBNAILWIDGET_H
+#ifndef INC_ThumbnailWidget_H
+#define INC_ThumbnailWidget_H
 
 #include "Global.h"
 
@@ -90,4 +90,4 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // THUMBNAILWIDGET_H
+#endif // INC_ThumbnailWidget_H

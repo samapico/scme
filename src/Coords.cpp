@@ -33,7 +33,21 @@ LevelCoords::LevelCoords(const ScreenCoords& screenPixel) :
 {
 }
 
+//////////////////////////////////////////////////////////////////////////
 
+QPointF ScreenCoords::uv() const
+{
+    return QPointF(QPointF::x() / mWidget->width(), QPointF::y() / mWidget->height());
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QSize ScreenCoords::screenSize() const
+{
+    if (!mWidget)
+        return QSize();
+    return mWidget->size();
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -53,6 +67,15 @@ LevelCoords ScreenCoords::toLevel() const
     return LevelCoords(
         QPointF( (*this / mWidget->zoomFactor()) + mWidget->viewTopLeft() )
     );
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+ScreenCoords ScreenCoords::boundToLevel() const
+{
+    LevelCoords level = toLevel();
+
+    return ScreenCoords();
 }
 
 
