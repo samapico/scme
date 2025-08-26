@@ -6,18 +6,17 @@
 #include <QtCore/QPointF>
 #include <QtCore/QRectF>
 #include <QtCore/QSizeF>
+#include <QtGui/QMatrix4x4>
+
 
 ///////////////////////////////////////////////////////////////////////////
 
 class QSinglePointEvent;
 
+
 ///////////////////////////////////////////////////////////////////////////
 
 namespace SCME {
-
-constexpr int TILE_W = 16;
-constexpr int TILE_H = 16;
-constexpr QSize TILE_SIZE(16, 16);
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -26,6 +25,13 @@ class LevelCoords;
 class LevelTileCoords;
 class ScreenCoords;
 class EditorWidget;
+
+class TileCoords : public QPoint
+{
+public:
+    using QPoint::QPoint;
+};
+
 
 class ScreenCoords : public QPointF
 {
@@ -70,6 +76,8 @@ public:
 
     /// Bound screen coordinate to the edges of the level
     ScreenCoords boundToLevel() const;
+
+    const EditorWidget* widget() const { return mWidget; }
 
 private:
 
@@ -152,6 +160,26 @@ public:
     inline LevelCoords center() const { return LevelCoords(QRectF::center()); }
 
     inline LevelBounds intersected(const LevelBounds& other) const { return LevelBounds(QRectF::intersected(other)); }
+
+    inline int tileLeft() const { return QRectF::left() / TILE_W; }
+
+    inline int tileRight() const { return QRectF::right() / TILE_W; }
+
+    inline int tileTop() const { return QRectF::top() / TILE_H; }
+
+    inline int tileBottom() const { return QRectF::bottom() / TILE_H; }
+
+    static inline QMatrix4x4 orthoPixels(float l, float r, float b, float t)
+    {
+        QMatrix4x4 m;
+        m.ortho(l, r, b, t, -1.0f, 1.0f);
+        return m;
+    }
+
+    inline QMatrix4x4 orthoPixels() const
+    {
+        return orthoPixels(left(), right(), bottom(), top());
+    }
 
     static inline LevelBounds fromTopLeftAndZoom(const LevelCoords& topLeft, const QSize& size, float zoomFactor)
     {

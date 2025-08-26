@@ -8,5 +8,7 @@
         <file>graphics/over4.bmp</file>
         <file>graphics/over5.bmp</file>
         <file>graphics/tiles.bmp</file>
+        <file>shaders/tile_fs.glsl</file>
+        <file>shaders/tile_vs.glsl</file>
     </qresource>
 </RCC>

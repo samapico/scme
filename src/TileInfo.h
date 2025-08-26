@@ -82,9 +82,11 @@ constexpr TileInfoArray initTileInfo()
 {
     TileInfoArray tileInfoArray;
 
-    for (size_t i = 0; i < tileInfoArray.size(); i++)
+    for (size_t i = 1; i < tileInfoArray.size(); i++)
     {
         tileInfoArray[i].mIsSolid = true;
+
+        tileInfoArray[i].mPixelColor = (i <= TILESET_COUNT) ? TileInfo::PixelColorNormal : TileInfo::PixelColorSpecial;
     }
 
     return tileInfoArray;

@@ -75,6 +75,21 @@ public:
 
     TileId mId = Void;
 
+    operator TileId& () { return mId; }
+    operator const TileId& () const { return mId; }
+    inline Tile& operator=(const Tile& copy)
+    {
+        mId = copy.mId;
+        return *this;
+    };
+
+    inline Tile& operator=(TileId id)
+    {
+        mId = id;
+        return *this;
+    };
+
+
     inline bool isTileset() const { return mId > 0 && mId <= 190; }
 
     inline bool isVisible() const;
@@ -101,7 +116,8 @@ public:
     std::shared_ptr<LevelObject> getObject() const;
 };
 
-
+/// We must be able to send a 1024x1024 array of Tile to the GPU as a 1024x1024 array of uint8_t
+static_assert(sizeof(Tile) == sizeof(TileId));
 
 //////////////////////////////////////////////////////////////////////////
 

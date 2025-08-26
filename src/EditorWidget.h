@@ -4,6 +4,7 @@
 #include "Global.h"
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
+#include <QtOpenGL/QOpenGLFunctions_3_3_Core>
 
 #include <QtCore/QParallelAnimationGroup>
 #include <QtCore/QPoint>
@@ -29,6 +30,8 @@ namespace SCME {
 
 class Editor;
 class FrameCounter;
+class TileRenderer;
+class LevelData;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,6 +46,8 @@ class EditorWidget : public QOpenGLWidget
 public:
     EditorWidget(Editor* editor, QWidget *parent = nullptr);
     virtual ~EditorWidget();
+
+    std::shared_ptr<LevelData> level() const;
 
     /// Reimplemented from QWidget
     QSize minimumSizeHint() const;
@@ -83,6 +88,10 @@ public slots:
 
     void setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom);
 
+    void onLevelChanged();
+
+    void onTilesetChanged();
+
 signals:
 
     void viewMoved(const LevelBounds& viewBounds);
@@ -107,11 +116,11 @@ protected:
     /// Reimplemented from QWidget
     void paintEvent(QPaintEvent *event) override;
 
-    void drawDebug(QPainter& painter);
+    void drawDebug(QPainter& painter, const LevelData* pLevel);
 
-    void drawGrid(QPainter& painter);
+    void drawGrid(QPainter& painter, const LevelData* pLevel);
 
-    void drawObjects(QPainter& painter);
+    void drawObjects(QPainter& painter, const LevelData* pLevel);
 
 private:
 
@@ -137,6 +146,8 @@ private:
 
     QPointer<QPropertyAnimation> mSmoothView;
     bool mSmoothViewStopPan = false;
+
+    std::unique_ptr<TileRenderer> mTileRenderer;
 
     LevelCoords mCursor;
 };

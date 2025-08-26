@@ -76,8 +76,8 @@ void EditorConfig::setDefaultConfig()
 
     addZoomLevels(1.0f/32.0f, 8.0f, 2.0f);
 
-    mPixelsPerGridFadeIn = 2.75f;
-    mPixelsPerGridFadeOut = 4.0f;
+    mPixelsPerGridFadeIn = 9.0f;
+    mPixelsPerGridFadeOut = 15.0f;
 
     mSmoothCameraTime = 350;
 

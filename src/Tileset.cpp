@@ -1,5 +1,7 @@
 #include "Tileset.h"
 
+#include "ExtraLevelData.h"
+
 #include <QtCore/QDebug>
 #include <QtCore/QIODevice>
 
@@ -29,6 +31,27 @@ const QImage& Tileset::image() const
 
 //////////////////////////////////////////////////////////////////////////
 
+const Tileset::BitmapFileHeader& Tileset::fileHeader() const
+{
+    return mFileHeader;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+const Tileset::BitmapInfoHeader& Tileset::infoHeader() const
+{
+    return mInfoHeader;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+bool Tileset::isDefault() const
+{
+    return mIsDefault;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void Tileset::setImage(const QImage& image)
 {
     mIsDefault = false;
@@ -45,8 +68,12 @@ void Tileset::setDefault()
 
 //////////////////////////////////////////////////////////////////////////
 
-QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
+bool Tileset::load(QDataStream& in, Tileset& tileset, ExtraLevelData& out_eLVLdata)
 {
+    Q_ASSERT(in.device());
+    if (!in.device())
+        return false;
+
     //         'update the menu's
     //         'TORESTORE
     // '        frmGeneral.mnudiscardtileset.Enabled = True
@@ -90,32 +117,16 @@ QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
 
     if (tileset.mFileHeader.bfReserved1)
     {
-        qDebug() << "eLVL data at " << tileset.mFileHeader.bfReserved;
+        qDebug() << "Possible eLVL data at " << tileset.mFileHeader.bfReserved;
 
         in.device()->seek(tileset.mFileHeader.bfReserved);
 
-        uint32_t magic;
-        uint32_t len;
-        uint32_t reserved;
+        if (ExtraLevelData::load(in, out_eLVLdata))
+        {
+            qDebug() << "eLVL data:" << out_eLVLdata.mBytes.toPercentEncoding();
+        }
 
-        in.setByteOrder(QDataStream::LittleEndian);
-        in >> magic;
-        Q_ASSERT(magic == 0x6c766c65);
-        in >> len;
-        in >> reserved;
-
-        qDebug() << len << " bytes in eLVL";
-
-        len -= 12;
-
-        char* buf = new char[len+1];
-        in.readRawData(buf, len);
-        buf[len] = '\0';
-
-        QByteArray str(buf, len);
-        qDebug() << str.toPercentEncoding();
-
-        delete[] buf;
+        qDebug() << "Now at " << in.device()->pos();
     }
     else
     {
@@ -127,5 +138,5 @@ QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
 
     tileset.mIsDefault = false;
 
-    return in;
+    return in.status() == QDataStream::Status::Ok;
 }

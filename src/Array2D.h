@@ -107,6 +107,18 @@ inline void Array2D<Data>::resize(const QSize& dimensions)
 }
 
 template<typename Data>
+inline int Array2D<Data>::width() const
+{
+    return mDims.width();
+}
+
+template<typename Data>
+inline int Array2D<Data>::height() const
+{
+    return mDims.height();
+}
+
+template<typename Data>
 inline QSize Array2D<Data>::size() const
 {
     return mDims;
@@ -115,13 +127,13 @@ inline QSize Array2D<Data>::size() const
 template<typename Data>
 inline const Data& Array2D<Data>::operator()(int x, int y) const
 {
-    return operator[](width() * y + x);
+    return QVector<Data>::at(width()* y + x);
 }
 
 template<typename Data>
 inline Data& Array2D<Data>::operator()(int x, int y)
 {
-    return operator[](width() * y + x);
+    return QVector<Data>::operator[](width() * y + x);
 }
 
 template<typename Data>

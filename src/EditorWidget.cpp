@@ -13,6 +13,8 @@
 
 #include "Editor.h"
 #include "FrameCounter.h"
+#include "TileRenderer.h"
+#include "LevelData.h"
 
 #include <gl/GL.h>
 
@@ -38,7 +40,6 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     mSmoothView(new QPropertyAnimation(this, "viewBoundsAndZoom", this))
 {
     this->setMouseTracking(true);
-
     mFrameCounter = new FrameCounter(this);
 
     connect(mFrameCounter, &FrameCounter::framesCounted, this, [this](double fps)
@@ -46,7 +47,6 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
             //Force redraw
             update();
         });
-
 
 #ifdef NO_FPS_LIMIT
     QTimer* timerMaxFps = new QTimer(this);
@@ -71,6 +71,13 @@ EditorWidget::~EditorWidget()
 
 //////////////////////////////////////////////////////////////////////////
 
+std::shared_ptr<LevelData> EditorWidget::level() const
+{
+    return mEditor ? mEditor->level() : nullptr;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 QSize EditorWidget::minimumSizeHint() const
 {
     return QSize(50, 50);
@@ -89,8 +96,17 @@ void EditorWidget::initializeGL()
 {
     QOpenGLWidget::initializeGL();
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     //Background color
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0.01f, 0.01f, 0.01f, 1.0f);
+
+    auto pLevel = level();
+
+    //Ensure tile shader is initialized
+    mTileRenderer = std::make_unique<TileRenderer>();
+    mTileRenderer->init(pLevel ? pLevel->tileset() : Tileset());
 
     mFrameCounter->start();
 }
@@ -101,20 +117,31 @@ void EditorWidget::paintGL()
 {
     QOpenGLWidget::paintGL();
 
-    QPainter painter;
-    painter.begin(this);
+    auto pLevel = level();
+    if (!pLevel)
+        return;
 
-    if (mEditor->level())
     {
-        drawGrid(painter);
+        QPainter painter(this);
+        painter.beginNativePainting();
 
-//#ifdef _DEBUG
-        drawDebug(painter);
-//#endif
+        //Draw grid under rendered tiles
+        drawGrid(painter, pLevel.get());
+
+        painter.endNativePainting();
     }
 
-    painter.end();
+    mTileRenderer->render(pLevel.get(), viewBounds(), zoomFactor());
 
+    {
+        QPainter painter(this);
+        painter.beginNativePainting();
+
+        //Draw on top of render
+        drawDebug(painter, pLevel.get());
+
+        painter.endNativePainting();
+    }
 
     mFrameCounter->onFrameRendered();
 }
@@ -123,9 +150,12 @@ void EditorWidget::paintGL()
 
 void EditorWidget::resizeGL( int width, int height )
 {
+    QOpenGLWidget::resizeGL(width, height);
+
+    glViewport(0, 0, width, height);
+
     emit viewMoved(viewBounds());
 
-    QOpenGLWidget::resizeGL(width, height);
     /*
     int side = qMin(width, height);
     glViewport((width - side) / 2, (height - side) / 2, side, side);
@@ -158,7 +188,8 @@ void EditorWidget::resizeGL( int width, int height )
 
 void EditorWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (!mEditor->level())
+    auto pLevel = level();
+    if (!pLevel)
         return;
 
     /// @todo Start drag with specific mouse button(s)
@@ -172,12 +203,16 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
 void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    mCursor = mEditor->boundPixelToLevel(ScreenCoords(this, event).toLevel());
+    auto pLevel = level();
+    if (!pLevel)
+        return;
 
-    if (mDragging && mEditor->level())
+    mCursor = pLevel->boundPixelToLevel(ScreenCoords(this, event).toLevel());
+
+    if (mDragging)
     {
         //qDebug() << "Drag@ " << event->position();
-        setViewCenter(mEditor->boundPixelToLevel(LevelCoords(mCenterOrig - ((event->position() - mDragStart) / mZoomFactor))));
+        setViewCenter(pLevel->boundPixelToLevel(LevelCoords(mCenterOrig - ((event->position() - mDragStart) / mZoomFactor))));
     }
     else
     {
@@ -189,7 +224,8 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
 
 void EditorWidget::wheelEvent(QWheelEvent *event)
 {
-    if (!mEditor->level())
+    auto pLevel = level();
+    if (!pLevel)
         return;
 
     if (mDragging)
@@ -209,19 +245,19 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
     }
 
     float zoomMultiplier = mEditor->config().zoomFactorAtIndex(mZoomIndex);
-    qDebug() << "zoomIndex=" << mZoomIndex << "; zoom=" << zoomMultiplier;
+    qDebug() << "zoomIndex=" << mZoomIndex << "; zoom=" << zoomMultiplier << zoomFactorAsString(zoomMultiplier);
 
     ScreenCoords screenTarget(this, event);
 
     //zoomAt(LevelCoords(ScreenCoords(this, event)), zoomMultiplier);
-    zoomTowards(LevelCoords(screenTarget), mEditor->boundScreenPixelToLevel(screenTarget), zoomMultiplier);
+    zoomTowards(LevelCoords(screenTarget), pLevel->boundScreenPixelToLevel(screenTarget), zoomMultiplier);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (!mEditor->level())
+    if (!level())
         return;
 
     if (mDragging)
@@ -244,16 +280,19 @@ void EditorWidget::paintEvent(QPaintEvent *event)
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::drawGrid(QPainter& painter)
+void EditorWidget::drawGrid(QPainter& painter, const LevelData* pLevel)
 {
+    Q_ASSERT(pLevel);
+
+    painter.save();
     painter.setRenderHint(QPainter::Antialiasing, false);
 
-    QSize levelSize = mEditor->levelSize();
+    QSize levelSize = pLevel->size();
 
     //visible level bounds
     LevelBounds visibleLevelBounds = viewBounds();
 
-    LevelBounds entireLevelBounds = mEditor->levelBounds();
+    LevelBounds entireLevelBounds = pLevel->bounds();
     ScreenCoords levelTopLeftInScreen = entireLevelBounds.topLeft().toScreen(this);
     ScreenCoords levelBottomRightInScreen = entireLevelBounds.bottomRight().toScreen(this);
 
@@ -270,7 +309,7 @@ void EditorWidget::drawGrid(QPainter& painter)
         screenBounds.setBottom(levelBottomRightInScreen.y());
 
     //Bound to level limits
-    visibleLevelBounds = visibleLevelBounds.intersected(mEditor->levelBounds());
+    visibleLevelBounds = visibleLevelBounds.intersected(entireLevelBounds);
 
     LevelCoords visibleTopLeft = visibleLevelBounds.topLeft();
     LevelCoords visibleBottomRight = visibleLevelBounds.bottomRight();
@@ -331,12 +370,16 @@ void EditorWidget::drawGrid(QPainter& painter)
             painter.drawLine(screenx, screenBounds.top(), screenx, screenBounds.bottom());
         }
     }
+
+    painter.restore();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::drawDebug(QPainter& painter)
+void EditorWidget::drawDebug(QPainter& painter, const LevelData* pLevel)
 {
+    painter.save();
+
     QString str;
 
     painter.setPen(QColor(Qt::green));
@@ -364,14 +407,37 @@ void EditorWidget::drawDebug(QPainter& painter)
         .arg(mSmoothView->duration())
         .arg(mSmoothViewStopPan)
     );
+
+    painter.restore();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::onLevelChanged()
+{
+    onTilesetChanged();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::onTilesetChanged()
+{
+    auto pLevel = level();
+
+    if (mTileRenderer && pLevel)
+        mTileRenderer->updateTileset(pLevel->tileset());
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::zoomAt(const LevelCoords& center, float newZoomFactor)
 {
+    auto pLevel = level();
+    if (!pLevel)
+        return;
+
     //make sure the level is still in the view
-    LevelCoords targetCenter = mEditor->boundPixelToLevel(center);
+    LevelCoords targetCenter = pLevel->boundPixelToLevel(center);
 
     //upper zoom limit
     if (newZoomFactor > mEditor->config().maxZoomFactor())
@@ -383,15 +449,19 @@ void EditorWidget::zoomAt(const LevelCoords& center, float newZoomFactor)
 
     mTargetZoomFactor = newZoomFactor;
 
-    setViewTargetAndZoomSmooth(targetCenter, mEditor->boundScreenPixelToLevel(screenCenter()), newZoomFactor);
+    setViewTargetAndZoomSmooth(targetCenter, pLevel->boundScreenPixelToLevel(screenCenter()), newZoomFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::zoomTowards(const LevelCoords& target, const ScreenCoords& screenTarget, float newZoomFactor)
 {
+    auto pLevel = level();
+    if (!pLevel)
+        return;
+
     //make sure the level is still in the view
-    LevelCoords targetCenter = mEditor->boundPixelToLevel(target);
+    LevelCoords targetCenter = pLevel->boundPixelToLevel(target);
 
     //upper zoom limit
     if (newZoomFactor > mEditor->config().maxZoomFactor())
@@ -476,6 +546,10 @@ void EditorWidget::setViewCenter(const LevelCoords& centerPixel)
 
 void EditorWidget::setViewTargetSmooth(const LevelCoords& targetLevel, const ScreenCoords& targetScreen)
 {
+    auto pLevel = level();
+    if (!pLevel)
+        return;
+
     Q_ASSERT(mSmoothView);
 
     float targetZoom = zoomFactor();
@@ -486,13 +560,17 @@ void EditorWidget::setViewTargetSmooth(const LevelCoords& targetLevel, const Scr
         targetZoom = mSmoothView->endValue().value<SmoothViewBounds>().mZoomFactor;
     }
 
-    setViewTargetAndZoomSmooth(targetLevel, mEditor->boundScreenPixelToLevel(targetScreen), targetZoom);
+    setViewTargetAndZoomSmooth(targetLevel, pLevel->boundScreenPixelToLevel(targetScreen), targetZoom);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
 void EditorWidget::setViewCenterSmooth(const LevelCoords& targetCenter)
 {
+    auto pLevel = level();
+    if (!pLevel)
+        return;
+
     Q_ASSERT(mSmoothView);
 
     float targetZoom = zoomFactor();
@@ -513,7 +591,7 @@ void EditorWidget::setViewCenterSmooth(const LevelCoords& targetCenter)
         //setViewBoundsAndZoom(svb);
     }
 
-    setViewTargetAndZoomSmooth(targetCenter, mEditor->boundScreenPixelToLevel(screenCenter()), targetZoom);
+    setViewTargetAndZoomSmooth(targetCenter, pLevel->boundScreenPixelToLevel(screenCenter()), targetZoom);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -553,8 +631,12 @@ void EditorWidget::setViewTargetAndZoomSmooth(const LevelCoords& targetLevel, co
 
 void EditorWidget::setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom)
 {
+    auto pLevel = level();
+    if (!pLevel)
+        return;
+
     if (!mSmoothViewStopPan)
-        mCenter = mEditor->boundPixelToLevel(boundsAndZoom.mViewBounds.center());
+        mCenter = pLevel->boundPixelToLevel(boundsAndZoom.mViewBounds.center());
 
     mZoomFactor = boundsAndZoom.mZoomFactor;
 

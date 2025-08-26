@@ -4,6 +4,7 @@
 #include <QtGui/QPainter>
 
 #include "Editor.h"
+#include "LevelData.h"
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -80,7 +81,7 @@ void ThumbnailWidget::paintGL()
 */
 //////////////////////////////////////////////////////////////////////////
 
-void ThumbnailWidget::resizeGL( int width, int height )
+void ThumbnailWidget::resizeGL(int width, int height)
 {
     const int margin = 3;
 
@@ -102,7 +103,12 @@ void ThumbnailWidget::resizeGL( int width, int height )
     }
 
     Q_ASSERT(mEditor);
-    QSizeF  levelPixelSize = mEditor->levelBounds().size();
+    auto pLevel = mEditor->level();
+
+    if (!pLevel)
+        return;
+
+    QSizeF levelPixelSize = pLevel->bounds().size();
 
     mThumbnailScale = QPointF((qreal)mThumbnailArea.width () / levelPixelSize.width(),
                               (qreal)mThumbnailArea.height() / levelPixelSize.height());
@@ -262,9 +268,13 @@ void ThumbnailWidget::redrawView(const LevelBounds& viewBounds)
 
 LevelCoords ThumbnailWidget::screenToLevelPixel(const ThumbnailScreenCoords& screenxy)
 {
+    auto pLevel = mEditor->level();
+
     LevelCoords px(
         (screenxy.x() - mThumbnailArea.left()) / mThumbnailScale.x(),
         (screenxy.y() - mThumbnailArea.top ()) / mThumbnailScale.y());
 
-    return (mEditor->boundPixelToLevel(px));
+    if (pLevel)
+        return (pLevel->boundPixelToLevel(px));
+    return px;
 }

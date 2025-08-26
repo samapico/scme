@@ -3,6 +3,7 @@
 
 #include "Global.h"
 
+#include <QtCore/QPointer>
 #include <QtWidgets/QMainWindow>
 #include "ui_Editor.h"
 
@@ -24,25 +25,14 @@ class LevelData;
 class Editor : public QMainWindow
 {
     Q_OBJECT
-
 public:
 
     Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
     virtual ~Editor();
 
-    /// Size (in tiles) of the current level
-    QSize levelSize() const;
-
-    /// Size (in pixels) of the current level
-    inline const LevelBounds& levelBounds() const;
-
     inline const EditorConfig& config() const;
 
-    LevelCoords boundPixelToLevel(const LevelCoords& pixel) const;
-
-    ScreenCoords boundScreenPixelToLevel(const ScreenCoords& screenPixel) const;
-
-    inline const LevelData* level() const;
+    inline std::shared_ptr<LevelData> level() const;
 
 public slots:
 
@@ -73,22 +63,13 @@ private:
     Ui::EditorClass ui;
 
     EditorConfig mConfig;
-    LevelBounds mLevelBounds; //Entire level bounds (in pixels)
 
-    LevelData*       mLevel;
+    std::shared_ptr<LevelData> mLevel;
 
-    EditorWidget*    mEditorWidget;
-    ThumbnailWidget* mThumbnailWidget;
+    QPointer<EditorWidget>    mEditorWidget;
+    QPointer<ThumbnailWidget> mThumbnailWidget;
 };
 
-//////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////
-
-const LevelBounds& Editor::levelBounds() const
-{
-    return mLevelBounds;
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -99,7 +80,7 @@ const EditorConfig& Editor::config() const
 
 //////////////////////////////////////////////////////////////////////////
 
-const LevelData* Editor::level() const
+std::shared_ptr<LevelData> Editor::level() const
 {
     return mLevel;
 }

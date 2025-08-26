@@ -1,5 +1,6 @@
 #include "LevelData.h"
 
+#include "ExtraLevelData.h"
 #include <QtCore/QDataStream>
 #include <QtCore/QFile>
 #include <QtCore/QDebug>
@@ -11,10 +12,21 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
-LevelData::LevelData() :
-    mIsDirty(false),
-    mTiles(1024, 1024)
+static void Fill(Array2D<Tile>& map, const QRect& area, TileId value)
 {
+    for (int x = area.left(); x <= area.right(); x++)
+        for (int y = area.top(); y <= area.bottom(); y++)
+            map(x, y) = value;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
+LevelData::LevelData() :
+    mIsDirty(false)
+{
+    mBounds = LevelBounds(LevelCoords(0, 0), QSizeF(size().width() * TILE_W, size().height() * TILE_H));
+
     mTileset.setDefault();
 }
 
@@ -28,6 +40,8 @@ LevelData::~LevelData()
 
 bool LevelData::loadFromFile(const QString& filepath)
 {
+    qDebug() << "Loading level file:" << filepath;
+
     QFile f(filepath);
 
     QDataStream in(&f);
@@ -45,9 +59,7 @@ bool LevelData::loadFromFile(const QString& filepath)
 
 bool LevelData::load(QDataStream& in)
 {
-    /// @todo Clear current data
-
-    /// @todo Clear undo/redo stack
+    in.setByteOrder(QDataStream::LittleEndian);
 
 
     //
@@ -76,18 +88,29 @@ bool LevelData::load(QDataStream& in)
 
     bool hasTileset = false;
 
-    //Read first two bytes to see if this level contains a tileset
-    unsigned char c;
+    ExtraLevelData loadedExtraLevelData;
+    Tileset loadedTileset;
+    MapTiles loadedTiles;
 
-    /// @todo Read first 4 bytes, if it starts with 'elvl', we don't have a tileset, but we have eLVL
 
-    in >> c;
-    if (c == 'B')
+    //Look for eLVl header
+    if (ExtraLevelData::hasELVL(in))
     {
+        ExtraLevelData::load(in, loadedExtraLevelData);
+    }
+    else
+    {
+        //Look for bitmap header
+        //Read first two bytes to see if this level contains a tileset
+        unsigned char c;
         in >> c;
-        if (c == 'M')
+        if (c == 'B')
         {
-            hasTileset = true;
+            in >> c;
+            if (c == 'M')
+            {
+                hasTileset = true;
+            }
         }
     }
 
@@ -117,22 +140,35 @@ bool LevelData::load(QDataStream& in)
     if (hasTileset)
     {
         qDebug() << "Loading tileset...";
-        in >> mTileset;
 
-        if (mTileset.image().isNull())
+        if (Tileset::load(in, loadedTileset, loadedExtraLevelData))
         {
-            qWarning() << "Error loading tileset";
+            if (loadedTileset.image().isNull())
+            {
+                qWarning() << "No tileset loaded";
+                hasTileset = false;
+            }
+
+            if (loadedTileset.image().size() != TILESET_SIZE)
+            {
+                qWarning() << "Invalid tileset dimensions:" << loadedTileset.image().size();
+                hasTileset = false;
+            }
+
+            qDebug() << "Loaded tileset:" << loadedTileset.image().format() << loadedTileset.fileHeader().bfSize << loadedTileset.infoHeader().biBitCount << loadedTileset.infoHeader().biPlanes << loadedTileset.infoHeader().biSize << loadedTileset.infoHeader().biSizeImage;
+        }
+        else
+        {
+            qWarning() << "Error loading tileset:" << in.status();
             hasTileset = false;
         }
     }
 
     if (!hasTileset)
     {
-        mTileset.setDefault();
+        qDebug() << "Using default tileset...";
+        loadedTileset.setDefault();
     }
-
-    qDebug() << "Loading tiles... at " << in.device()->pos();
-
 
     //
     //
@@ -211,7 +247,52 @@ bool LevelData::load(QDataStream& in)
     //
     //
     //
-    //
+
+
+
+    auto pcurseek = in.device()->pos();
+    auto pendseek = in.device()->size();
+
+    qDebug() << QString("Loading %1 tiles at %2/%3...").arg(
+        QString::number((pendseek - pcurseek)/4),
+        QString::number(pcurseek),
+        QString::number(pendseek));
+
+    int tileCount = 0;
+    int badCount = 0;
+
+    while (!in.atEnd())
+    {
+        SerializedTile t;
+
+        in >> t.mBytes;
+
+        if (t._unused1 != 0 || t._unused2 != 0)
+        {
+            qWarning() << "Invalid tile data:" << intAsHexString(t.mBytes);
+            badCount++;
+            /// @todo Error message
+        }
+        else
+        {
+            if (in.status() == QDataStream::Status::Ok)
+            {
+                tileCount++;
+
+                loadedTiles(t.mX, t.mY).mId = t.mTileId;
+            }
+            else
+            {
+                qWarning() << "Read error at" << in.device()->pos() << in.status();
+            }
+        }
+    };
+
+    qDebug() << "Loaded" << tileCount << "tiles" << this;
+
+    if (badCount)
+        qWarning() << "Loaded" << badCount << "bad tiles";
+
     //     AddDebug "OpenMap, tile data starting at " & Seek(f)
     //
     //     Call frmGeneral.UpdateProgress("Loading map", 200)
@@ -393,9 +474,21 @@ bool LevelData::load(QDataStream& in)
     //     HandleError Err, "frmMain.OpenMap " & filename
     // End Sub
 
-    mIsDirty = false;
+    if (in.status() == QDataStream::Status::Ok)
+    {
+        //Assign loaded data
+        mIsDirty = false;
 
-    return true;
+        mTiles = loadedTiles;
+        mExtraLevelData = loadedExtraLevelData;
+        mTileset = loadedTileset;
+
+        /// @todo Clear undo/redo stack
+
+        return true;
+    }
+
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -731,6 +824,45 @@ bool LevelData::saveToFile(const QString& filepath) const
 
 //////////////////////////////////////////////////////////////////////////
 
+LevelCoords LevelData::boundPixelToLevel(const LevelCoords& pixel) const
+{
+    return bounds().bounded(pixel);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+ScreenCoords LevelData::boundScreenPixelToLevel(const ScreenCoords& screenPixel) const
+{
+    LevelCoords level = screenPixel.toLevel();
+
+    LevelCoords levelBounded = boundPixelToLevel(level);
+
+    if (level != levelBounded)
+        return levelBounded.toScreen(screenPixel.widget());
+
+    return screenPixel;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void LevelData::boundTileToLevel(int& tileX, int& tileY) const
+{
+    tileX = std::clamp(tileX, 0, size().width() - 1);
+    tileY = std::clamp(tileY, 0, size().height() - 1);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+TileCoords LevelData::boundTileToLevel(const TileCoords& tileXY) const
+{
+    return TileCoords(
+        std::clamp(tileXY.x(), 0, size().width() - 1),
+        std::clamp(tileXY.y(), 0, size().height() - 1)
+    );
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 const Tileset& LevelData::tileset() const
 {
     return mTileset;
@@ -749,5 +881,3 @@ bool LevelData::isDirty() const
 {
     return mIsDirty;
 }
-
-//////////////////////////////////////////////////////////////////////////

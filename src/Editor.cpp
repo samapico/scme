@@ -8,6 +8,7 @@
 
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
+#include <QtGui/QCursor>
 
 #include <QtCore/QString>
 #include <QtCore/QDebug>
@@ -19,10 +20,7 @@ using namespace ::SCME;
 //////////////////////////////////////////////////////////////////////////
 
 Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
-    QMainWindow(parent, flags),
-    mEditorWidget(0),
-    mThumbnailWidget(0),
-    mLevel(0)
+    QMainWindow(parent, flags)
 {
 
     ui.setupUi(this);
@@ -54,28 +52,6 @@ Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
 
 Editor::~Editor()
 {
-    delete mLevel;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-LevelCoords Editor::boundPixelToLevel(const LevelCoords& pixel) const
-{
-    return mLevelBounds.bounded(pixel);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-ScreenCoords Editor::boundScreenPixelToLevel(const ScreenCoords& screenPixel) const
-{
-    LevelCoords level = screenPixel.toLevel();
-
-    LevelCoords levelBounded = boundPixelToLevel(level);
-
-    if (level != levelBounded)
-        return levelBounded.toScreen(mEditorWidget);
-
-    return screenPixel;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -139,10 +115,14 @@ void Editor::newLevel()
 {
     if (closeLevel())
     {
+        qApp->setOverrideCursor(Qt::WaitCursor);
+
         Q_ASSERT(!mLevel);
-        mLevel = new LevelData;
+        mLevel = std::make_shared<LevelData>();
 
         onLevelLoaded();
+
+        qApp->restoreOverrideCursor();
     }
 }
 
@@ -156,14 +136,18 @@ void Editor::openLevel()
     {
         if (closeLevel())
         {
+            qApp->setOverrideCursor(Qt::WaitCursor);
+
             Q_ASSERT(!mLevel);
-            mLevel = new LevelData;
+            mLevel = std::make_shared<LevelData>();
             if (!mLevel->loadFromFile(path))
             {
                 qWarning() << "Error opening '" << path << "'";
             }
 
             onLevelLoaded();
+
+            qApp->restoreOverrideCursor();
         }
     }
 }
@@ -172,14 +156,22 @@ void Editor::openLevel()
 
 void Editor::saveLevel()
 {
+    qApp->setOverrideCursor(Qt::WaitCursor);
 
+    /// ...
+
+    qApp->restoreOverrideCursor();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void Editor::saveLevelAs()
 {
+    qApp->setOverrideCursor(Qt::WaitCursor);
 
+    /// ...
+
+    qApp->restoreOverrideCursor();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -204,8 +196,7 @@ bool Editor::closeLevel()
 
     if (!cancel)
     {
-        delete mLevel;
-        mLevel = 0;
+        mLevel = nullptr;
     }
 
     onLevelLoaded();
@@ -217,32 +208,22 @@ bool Editor::closeLevel()
 
 void Editor::onLevelLoaded()
 {
-    if (mLevel)
-        mLevelBounds = LevelBounds(LevelCoords(0, 0), QSizeF(mLevel->size().width() * TILE_W, mLevel->size().height() * TILE_H));
-    else
-        mLevelBounds = LevelBounds();
-
     initEditorWidget();
     initTileset();
     initRadar();
 
     if (mEditorWidget)
     {
+        mEditorWidget->onLevelChanged();
+
         if (mLevel)
         {
             mEditorWidget->setDefaultZoom();
-            mEditorWidget->setViewCenter(mLevelBounds.center());
+            mEditorWidget->setViewCenter(mLevel->bounds().center());
         }
         else
         {
             mEditorWidget->update();
         }
     }
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-QSize Editor::levelSize() const
-{
-    return mLevel ? mLevel->size() : QSize(0, 0);
 }

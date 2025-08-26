@@ -9,13 +9,6 @@
 
 class QDataStream;
 
-//////////////////////////////////////////////////////////////////////////
-
-namespace SCME {
-    class Tileset;
-}
-
-QDataStream& operator >> (QDataStream& in, SCME::Tileset&);
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -23,10 +16,14 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
+class ExtraLevelData;
 
-class Tileset /*: public SpriteSheet*/
+
+//////////////////////////////////////////////////////////////////////////
+
+
+class Tileset
 {
-
 public:
 
 #pragma pack(push, 1)
@@ -86,6 +83,11 @@ public:
 
     void setDefault();
 
+    static bool load(QDataStream& in, Tileset& tileset, ExtraLevelData& out_eLVLdata);
+
+    const BitmapFileHeader& fileHeader() const;
+    const BitmapInfoHeader& infoHeader() const;
+
 protected:
 
     BitmapFileHeader mFileHeader;
@@ -94,8 +96,6 @@ protected:
     QImage mImage;
 
     bool mIsDefault;
-
-    friend QDataStream& (::operator >>) (QDataStream& in, Tileset&);
 };
 
 ///////////////////////////////////////////////////////////////////////////
