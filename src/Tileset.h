@@ -23,7 +23,8 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
-class Tileset
+
+class Tileset /*: public SpriteSheet*/
 {
 
 public:
@@ -33,43 +34,43 @@ public:
     /// @note Same as BITMAPFILEHEADER struct from WinGDI.h
     struct BitmapFileHeader
     {
-        quint16 bfType;
-        quint32 bfSize;
+        uint16_t bfType;
+        uint32_t bfSize;
         union
         {
             struct
             {
-                quint16 bfReserved1;
-                quint16 bfReserved2;
+                uint16_t bfReserved1;
+                uint16_t bfReserved2;
             };
-            quint32 bfReserved;
+            uint32_t bfReserved;
         };
-        quint32 bfOffBits;
+        uint32_t bfOffBits;
     };
 
     /// @note Same as BITMAPINFOHEADER struct from WinGDI.h
     struct BitmapInfoHeader
     {
-        quint32 biSize;
-        qint32  biWidth;
-        qint32  biHeight;
-        quint16 biPlanes;
-        quint16 biBitCount;
-        quint32 biCompression;
-        quint32 biSizeImage;
-        qint32  biXPelsPerMeter;
-        qint32  biYPelsPerMeter;
-        quint32 biClrUsed;
-        quint32 biClrImportant;
+        uint32_t biSize;
+        int32_t  biWidth;
+        int32_t  biHeight;
+        uint16_t biPlanes;
+        uint16_t biBitCount;
+        uint32_t biCompression;
+        uint32_t biSizeImage;
+        int32_t  biXPelsPerMeter;
+        int32_t  biYPelsPerMeter;
+        uint32_t biClrUsed;
+        uint32_t biClrImportant;
     };
 
     /// @note Same as RGBQUAD struct from WinGDI.h
     struct RGBQuad
     {
-        quint8 rgbBlue;
-        quint8 rgbGreen;
-        quint8 rgbRed;
-        quint8 rgbReserved;
+        uint8_t rgbBlue;
+        uint8_t rgbGreen;
+        uint8_t rgbRed;
+        uint8_t rgbReserved;
     };
 
 #pragma pack(pop)

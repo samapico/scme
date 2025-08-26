@@ -94,9 +94,9 @@ QDataStream& ::operator>>(QDataStream& in, SCME::Tileset& tileset)
 
         in.device()->seek(tileset.mFileHeader.bfReserved);
 
-        quint32 magic;
-        quint32 len;
-        quint32 reserved;
+        uint32_t magic;
+        uint32_t len;
+        uint32_t reserved;
 
         in.setByteOrder(QDataStream::LittleEndian);
         in >> magic;
