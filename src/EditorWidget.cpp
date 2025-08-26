@@ -426,6 +426,9 @@ void EditorWidget::onTilesetChanged()
 
     if (mTileRenderer && pLevel)
         mTileRenderer->updateTileset(pLevel->tileset());
+
+    //Force refresh
+    update();
 }
 
 //////////////////////////////////////////////////////////////////////////
