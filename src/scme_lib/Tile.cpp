@@ -1,0 +1,20 @@
+#include "Tile.h"
+
+#include "TileInfo.h"
+
+///////////////////////////////////////////////////////////////////////////
+
+using namespace ::SCME;
+
+//////////////////////////////////////////////////////////////////////////
+
+
+const TileInfo& Tile::getInfo() const
+{
+    return TileInfoDict[mId];
+}
+
+const TileInfo& Tile::getInfo(TileId id)
+{
+    return TileInfoDict[id];
+}

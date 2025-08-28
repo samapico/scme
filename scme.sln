@@ -3,7 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36401.2
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme", "src\scme.vcxproj", "{E513CAE9-0CB3-479B-842F-255F7779072A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_exe", "src\scme_exe\scme_exe.vcxproj", "{E513CAE9-0CB3-479B-842F-255F7779072A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9} = {54D6E390-D523-49A0-B584-086C9CAC2AE9}
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_lib", "src\scme_lib\scme_lib.vcxproj", "{75B437C5-1881-4B59-94E5-CEB93F85C64B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_ui", "src\scme_ui\scme_ui.vcxproj", "{54D6E390-D523-49A0-B584-086C9CAC2AE9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +26,14 @@ Global
 		{E513CAE9-0CB3-479B-842F-255F7779072A}.Debug|x64.Build.0 = Debug|x64
 		{E513CAE9-0CB3-479B-842F-255F7779072A}.Release|x64.ActiveCfg = Release|x64
 		{E513CAE9-0CB3-479B-842F-255F7779072A}.Release|x64.Build.0 = Release|x64
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B}.Debug|x64.ActiveCfg = Debug|x64
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B}.Debug|x64.Build.0 = Debug|x64
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B}.Release|x64.ActiveCfg = Release|x64
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B}.Release|x64.Build.0 = Release|x64
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Debug|x64.ActiveCfg = Debug|x64
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Debug|x64.Build.0 = Debug|x64
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Release|x64.ActiveCfg = Release|x64
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
