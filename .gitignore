@@ -26,3 +26,4 @@ lib/*
 *.orig
 *.tmp
 .vs
+.qtc_clangd

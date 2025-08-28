@@ -25,7 +25,7 @@ Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
 
     ui.setupUi(this);
 
-    setWindowTitle(tr("SCME v%1.%2.%3%5").arg(
+    setWindowTitle(tr("SCME v%1.%2.%3%4").arg(
         QString::number(APP_VERSION_MAJOR),
         QString::number(APP_VERSION_MINOR),
         QString::number(APP_VERSION_REV),
