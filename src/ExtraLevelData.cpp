@@ -15,21 +15,17 @@ using namespace ::SCME;
 
 bool ExtraLevelData::hasELVL(QDataStream& in)
 {
-    qDebug() << "@ExtraLevelData::hasELVL" << in.device()->pos();
-
     if (!in.atEnd())
     {
         in.startTransaction();
-        qDebug() << "@ExtraLevelData::hasELVL" << in.device()->pos();
 
         //Read bytes
         uint32_t magic;
         in >> magic;
-        qDebug() << "@ExtraLevelData::hasELVL after read at" << in.device()->pos();
 
         //Rollback read to return to original seek position
-        in.rollbackTransaction();
-        qDebug() << "@ExtraLevelData::hasELVL rolled back to" << in.device()->pos();
+        in.rollbackTransaction(); ///< sets the status to ReadPastEnd, we don't want that
+        in.resetStatus();
 
         return magic == MAGIC_ELVL; //"elvl"
     }
@@ -51,7 +47,8 @@ bool ExtraLevelData::load(QDataStream& in, ExtraLevelData& eLvlData)
 
     if (magic != MAGIC_ELVL)
     {
-        in.rollbackTransaction();
+        in.rollbackTransaction(); ///< sets the status to ReadPastEnd, we don't want that
+        in.resetStatus();
         qWarning() << "invalid eLVL data:" << intAsHexString(magic);
 
         return false;

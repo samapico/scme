@@ -43,6 +43,8 @@ public:
 
     void render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor);
 
+    void clearCache();
+
 protected:
 
     std::unique_ptr<QOpenGLTexture> mTexTileset;

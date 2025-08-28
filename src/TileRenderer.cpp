@@ -23,6 +23,15 @@ TileRenderer::~TileRenderer()
 
 //////////////////////////////////////////////////////////////////////////
 
+void TileRenderer::clearCache()
+{
+    cachedInstances.clear();
+    cachedBoundsTopLeft = {};
+    cachedBoundsBottomRight = {};
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void TileRenderer::init(const Tileset& tileset)
 {
     Renderer::init();

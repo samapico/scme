@@ -67,6 +67,9 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
 
 EditorWidget::~EditorWidget()
 {
+    //cleanup GL stuff
+    makeCurrent();
+    mTileRenderer = nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -425,7 +428,10 @@ void EditorWidget::onTilesetChanged()
     auto pLevel = level();
 
     if (mTileRenderer && pLevel)
+    {
+        mTileRenderer->clearCache();
         mTileRenderer->updateTileset(pLevel->tileset());
+    }
 
     //Force refresh
     update();
