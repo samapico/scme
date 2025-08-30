@@ -21,39 +21,54 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
-Editor::Editor(QWidget *parent, Qt::WindowFlags flags) :
+Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flags) :
     QMainWindow(parent, flags),
     ui(std::make_unique<Ui::EditorClass>())
 {
     ui->setupUi(this);
 
-    setWindowTitle(tr("SCME v%1.%2.%3%4").arg(
-        QString::number(APP_VERSION_MAJOR),
-        QString::number(APP_VERSION_MINOR),
-        QString::number(APP_VERSION_REV),
-#ifdef _DEBUG
-        tr(" (DEBUG)")
-#else
-        QString()
-#endif
-        ));
+    connect(this, &Editor::uiError, this, &Editor::onUiError);
+
+    setWindowTitle(tr("SCME v%1").arg(applicationVersionString()));
 
     connect(ui->changeGridPreset, &QPushButton::clicked, this, &Editor::toggleGridPreset);
 
     connect(ui->actionNew    , &QAction::triggered, this, &Editor::newLevel);
-    connect(ui->actionOpen   , &QAction::triggered, this, &Editor::openLevel);
+    connect(ui->actionOpen   , &QAction::triggered, this, qOverload<>(&Editor::openLevel));
     connect(ui->actionSave   , &QAction::triggered, this, &Editor::saveLevel);
-    connect(ui->actionSave_As, &QAction::triggered, this, &Editor::saveLevelAs);
+    connect(ui->actionSave_As, &QAction::triggered, this, qOverload<>(&Editor::saveLevelAs));
     connect(ui->actionClose  , &QAction::triggered, this, &Editor::closeLevel);
 
-    //Create new level
-    newLevel();
+    if (levelToOpen.isEmpty())
+    {
+        //Create new level
+        newLevel();
+    }
+    else
+    {
+        openLevel(levelToOpen);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+Editor::Editor(QWidget* parent, Qt::WindowFlags flags) :
+    Editor(QString(), parent, flags)
+{
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 Editor::~Editor()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::onUiError(const QString& message)
+{
+    qWarning() << "Error:" << message;
+    QMessageBox::warning(this, tr("Error"), message);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -130,50 +145,83 @@ void Editor::newLevel()
 
 //////////////////////////////////////////////////////////////////////////
 
-void Editor::openLevel()
+bool Editor::openLevel(const QString& filename)
+{
+    if (!QFile::exists(filename))
+    {
+        emit uiError(tr("File not found: %1").arg(filename));
+        return false;
+    }
+
+    qApp->setOverrideCursor(Qt::WaitCursor);
+
+    Q_ASSERT(!mLevel);
+    mLevel = std::make_shared<LevelData>();
+
+    bool bLoaded = mLevel->loadFromFile(filename);
+
+    qApp->restoreOverrideCursor();
+
+    if (bLoaded)
+    {
+        onLevelLoaded();
+    }
+    else
+    {
+        emit uiError(tr("Failed to load level: %1").arg(filename));
+    }
+
+    return bLoaded;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+bool Editor::openLevel()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Open File"), QString(), tr("Levels (*.lvl)"));
 
     if (!path.isEmpty())
     {
-        if (closeLevel())
+        if (closeLevel()) //user can cancel here if there are unsaved changes
         {
-            qApp->setOverrideCursor(Qt::WaitCursor);
-
-            Q_ASSERT(!mLevel);
-            mLevel = std::make_shared<LevelData>();
-            if (!mLevel->loadFromFile(path))
-            {
-                qWarning() << "Error opening '" << path << "'";
-            }
-
-            onLevelLoaded();
-
-            qApp->restoreOverrideCursor();
+            return openLevel(path);
         }
     }
+
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void Editor::saveLevel()
+bool Editor::saveLevel()
 {
     qApp->setOverrideCursor(Qt::WaitCursor);
 
     /// ...
 
     qApp->restoreOverrideCursor();
+
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void Editor::saveLevelAs()
+bool Editor::saveLevelAs(const QString& filename)
 {
     qApp->setOverrideCursor(Qt::WaitCursor);
 
     /// ...
 
     qApp->restoreOverrideCursor();
+
+    return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+bool Editor::saveLevelAs()
+{
+    return saveLevelAs(QString());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -210,6 +258,8 @@ bool Editor::closeLevel()
 
 void Editor::onLevelLoaded()
 {
+    qApp->setOverrideCursor(Qt::WaitCursor);
+
     initEditorWidget();
     initTileset();
     initRadar();
@@ -228,4 +278,5 @@ void Editor::onLevelLoaded()
             mEditorWidget->update();
         }
     }
+    qApp->restoreOverrideCursor();
 }

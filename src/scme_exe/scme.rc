@@ -1,7 +1,7 @@
 #include <winres.h>
 #include "../appver.h"
 
-IDI_ICON1		ICON		DISCARDABLE	"scme.ico"
+IDI_ICON1		ICON		DISCARDABLE	"scme_icon.ico"
 
 ///////////////////////////////////////////////////////////////////////////
 // Version

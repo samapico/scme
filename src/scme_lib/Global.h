@@ -15,6 +15,9 @@
 #include <QtGui/QMatrix4x4>
 #include <QtGui/QColor>
 
+#include "../appver.h"
+
+
 ///////////////////////////////////////////////////////////////////////////
 
 namespace SCME {
@@ -113,6 +116,21 @@ namespace SCME {
     static QByteArray intAsBytes(INT_TYPE n)
     {
         return QByteArray((const char*)(&n), sizeof(INT_TYPE));
+    }
+
+
+    static QString applicationVersionString()
+    {
+        return QString("%1.%2.%3%4").arg(
+            QString::number(APP_VERSION_MAJOR),
+            QString::number(APP_VERSION_MINOR),
+            QString::number(APP_VERSION_REV),
+#ifdef _DEBUG
+            QString(" (DEBUG)")
+#else
+            QString()
+#endif
+        );
     }
 
 

@@ -60,11 +60,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <TargetName>$(ProjectName)_d</TargetName>
+    <TargetName>SCME_d</TargetName>
     <OutDir>$(SolutionDir)bin_d\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <TargetName>SCME</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
@@ -76,6 +77,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../scme_lib;../scme_ui</AdditionalIncludeDirectories>
     </ClCompile>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -87,6 +89,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../scme_lib;../scme_ui</AdditionalIncludeDirectories>
     </ClCompile>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
@@ -123,13 +126,13 @@
     <ClInclude Include="..\appver.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="scme.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="scme.rc" />
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="..\res\editor.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="scme_icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

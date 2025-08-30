@@ -28,9 +28,17 @@ class LevelData;
 class SCME_UI_DLL Editor : public QMainWindow
 {
     Q_OBJECT
+
+signals:
+
+    void uiError(const QString& message);
+
 public:
 
     Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
+
+    Editor(const QString& levelToOpen, QWidget* parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
+
     virtual ~Editor();
 
     inline const EditorConfig& config() const;
@@ -45,15 +53,23 @@ public slots:
 
     void newLevel();
 
-    void openLevel();
+    bool openLevel();
 
-    void saveLevel();
+    bool openLevel(const QString& filename);
 
-    void saveLevelAs();
+    bool saveLevel();
+
+    bool saveLevelAs();
+
+    bool saveLevelAs(const QString& filename);
 
     void toggleGridPreset();
 
     void onLevelLoaded();
+
+private slots:
+
+    void onUiError(const QString& message);
 
 private:
 
