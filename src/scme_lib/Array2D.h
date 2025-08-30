@@ -29,15 +29,23 @@ public:
 
     inline QSize size() const;
 
+    inline const Data& get(const QPoint& xy) const;
+
     inline const Data& get(int x, int y) const;
 
     inline void set(int x, int y, const Data& data);
+
+    inline void set(const QPoint& xy, const Data& data);
 
     void resize(const QSize& dimensions);
 
     inline const Data& operator()(int x, int y) const;
 
     inline Data& operator()(int x, int y);
+
+    inline const Data& operator()(const QPoint& xy) const;
+
+    inline Data& operator()(const QPoint& xy);
 
     inline const Data* rowPtr(int y) const;
 
@@ -46,6 +54,8 @@ public:
     Array2D<Data> copyRect(int left, int top, int right, int bottom) const;
 
     bool isInBounds(int x, int y) const;
+
+    bool isInBounds(const QPoint& xy) const;
 
 protected:
 
@@ -93,10 +103,24 @@ inline const Data& Array2D<Data>::get(int x, int y) const
 }
 
 template<typename Data>
+inline const Data& Array2D<Data>::get(const QPoint& xy) const
+{
+    Q_ASSERT(isInBounds(xy));
+    return operator()(xy);
+}
+
+template<typename Data>
 inline void Array2D<Data>::set(int x, int y, const Data& data)
 {
     Q_ASSERT(isInBounds(x, y));
     operator()(x, y) = data;
+}
+
+template<typename Data>
+inline void Array2D<Data>::set(const QPoint& xy, const Data& data)
+{
+    Q_ASSERT(isInBounds(xy));
+    operator()(xy) = data;
 }
 
 template<typename Data>
@@ -132,9 +156,21 @@ inline const Data& Array2D<Data>::operator()(int x, int y) const
 }
 
 template<typename Data>
+inline const Data& Array2D<Data>::operator()(const QPoint& xy) const
+{
+    return QVector<Data>::at(width() * xy.y() + xy.x());
+}
+
+template<typename Data>
 inline Data& Array2D<Data>::operator()(int x, int y)
 {
     return QVector<Data>::operator[](width() * y + x);
+}
+
+template<typename Data>
+inline Data& Array2D<Data>::operator()(const QPoint& xy)
+{
+    return QVector<Data>::operator[](width()* xy.y() + xy.x());
 }
 
 template<typename Data>
@@ -181,6 +217,12 @@ template<typename Data>
 inline bool Array2D<Data>::isInBounds(int x, int y) const
 {
     return x >= 0 && y >= 0 && x < width() && y < height();
+}
+
+template<typename Data>
+inline bool Array2D<Data>::isInBounds(const QPoint& xy) const
+{
+    return isInBounds(xy.x(), xy.y());
 }
 
 } // End namespace SCME

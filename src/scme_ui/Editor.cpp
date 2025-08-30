@@ -3,6 +3,7 @@
 
 #include "EditorWidget.h"
 #include "ThumbnailWidget.h"
+#include "LambdaEventFilter.h"
 
 #include "LevelData.h"
 
@@ -11,6 +12,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
 #include <QtGui/QCursor>
+#include <QtGui/QMouseEvent>
 
 #include <QtCore/QString>
 #include <QtCore/QDebug>
@@ -18,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 using namespace ::SCME;
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -38,6 +41,31 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
     connect(ui->actionSave   , &QAction::triggered, this, &Editor::saveLevel);
     connect(ui->actionSave_As, &QAction::triggered, this, qOverload<>(&Editor::saveLevelAs));
     connect(ui->actionClose  , &QAction::triggered, this, &Editor::closeLevel);
+
+    //[=](QObject* obj, QEvent* event)
+    ui->labelTileset->installEventFilter(new LambdaEventFilter([=](QObject* obj, QEvent* event) -> bool
+        {
+            if (event->type() == QEvent::MouseButtonPress)
+            {
+                auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
+
+                if (mouseEvent->button() == Qt::MouseButton::LeftButton)
+                {
+                    QPointF pos = mouseEvent->position();
+
+                    if (pos.x() >= 0 && pos.y() >= 0 && pos.x() < TILESET_W && pos.y() < TILESET_H)
+                    {
+                        int tileId = 1 + int(pos.x() / TILE_W) + int(pos.y() / TILE_H) * TILESET_COUNT_W;
+
+                        ui->tileId->setValue(tileId);
+                    }
+                }
+            }
+            return false;
+        },
+        this)
+    );
+
 
     if (levelToOpen.isEmpty())
     {
@@ -94,6 +122,8 @@ void Editor::initEditorWidget()
     {
         mEditorWidget = new EditorWidget(this);
         setCentralWidget(mEditorWidget);
+
+        connect(ui->tileId, &QSpinBox::valueChanged, mEditorWidget, &EditorWidget::setCurrentTileId);
     }
 }
 

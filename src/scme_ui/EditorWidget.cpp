@@ -14,6 +14,8 @@
 #include "Editor.h"
 #include "FrameCounter.h"
 #include "TileRenderer.h"
+#include "MinimapRenderer.h"
+
 #include "LevelData.h"
 
 #include <gl/GL.h>
@@ -70,6 +72,7 @@ EditorWidget::~EditorWidget()
     //cleanup GL stuff
     makeCurrent();
     mTileRenderer = nullptr;
+    mMinimapRenderer = nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -128,6 +131,9 @@ void EditorWidget::initializeGL()
     mTileRenderer = std::make_unique<TileRenderer>();
     mTileRenderer->init(pLevel ? pLevel->tileset() : Tileset());
 
+    mMinimapRenderer = std::make_unique<MinimapRenderer>();
+    mMinimapRenderer->init();
+
     mFrameCounter->start();
 }
 
@@ -141,6 +147,8 @@ void EditorWidget::paintGL()
     if (!pLevel)
         return;
 
+    mMinimapRenderer->refreshMinimap(pLevel);
+
     {
         QPainter painter(this);
         painter.beginNativePainting();
@@ -151,7 +159,48 @@ void EditorWidget::paintGL()
         painter.endNativePainting();
     }
 
-    mTileRenderer->render(pLevel.get(), viewBounds(), zoomFactor());
+    LevelBounds renderBounds = viewBounds();
+
+    constexpr float pixelRenderFadeInZoomFactor = 1.f / 12.f;
+    constexpr float pixelRenderFadeOutZoomFactor = 1.f / 16.f;
+
+    float minimapRenderOpacity = 1.f - std::clamp(
+        (zoomFactor() - pixelRenderFadeOutZoomFactor) / (pixelRenderFadeInZoomFactor - pixelRenderFadeOutZoomFactor),
+        0.f,
+        1.f);
+
+    if (minimapRenderOpacity < 1.f)
+    {
+        mTileRenderer->render(pLevel.get(), renderBounds, zoomFactor());
+    }
+
+
+    if (minimapRenderOpacity > 0.f)
+    {
+        std::shared_ptr<QImage> img = mMinimapRenderer->image();
+
+        if (img)
+        {
+            QPainter painter(this);
+            painter.beginNativePainting();
+
+            //Use exact pixel scale for 1:16 zoom (or more zoomed in), and use smooth interpolation when zoomed out more
+            painter.setRenderHint(QPainter::SmoothPixmapTransform, zoomFactor() < 1.f / 17.f);
+
+            painter.setOpacity(minimapRenderOpacity);
+
+            ScreenCoords screenTopLeft = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(0, 0)));
+            ScreenCoords screenBottomRight = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(width(), height())));
+
+            painter.drawImage(
+                QRectF(screenTopLeft, screenBottomRight),
+                *img,
+                QRectF(screenTopLeft.toLevel().tilef(), screenBottomRight.toLevel().tilef())
+            );
+
+            painter.endNativePainting();
+        }
+    }
 
     {
         QPainter painter(this);
@@ -206,17 +255,83 @@ void EditorWidget::resizeGL( int width, int height )
 
 //////////////////////////////////////////////////////////////////////////
 
+static void setLevelTile(EditorWidget* w, const std::shared_ptr<LevelData>& level, const QPoint& tile, TileId id)
+{
+    auto& r = level->tiles()(tile);
+    if (r.mId != id)
+    {
+        r.mId = id;
+        w->onTilesChanged();
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
 void EditorWidget::mousePressEvent(QMouseEvent *event)
 {
     auto pLevel = level();
     if (!pLevel)
         return;
 
+    ScreenCoords clickScreenCoords(this, event);
+
     /// @todo Start drag with specific mouse button(s)
 
-    mDragStart = ScreenCoords(this, event);
-    mCenterOrig = viewCenter();
-    mDragging  = true;
+    if (event->buttons().testFlag(Qt::MouseButton::LeftButton))
+    {
+        //Draw
+        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
+        setLevelTile(this, pLevel, tile, mCurrentTileId);
+    }
+
+    if (event->buttons().testFlag(Qt::MouseButton::RightButton))
+    {
+        //Erase
+        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
+        setLevelTile(this, pLevel, tile, Tile::Void);
+    }
+
+    if (event->buttons().testFlag(Qt::MouseButton::MiddleButton))
+    {
+        mDragStart = clickScreenCoords;
+        mCenterOrig = viewCenter();
+        mDragging = true;
+    }
+}
+
+/// Move this!
+template<typename F>
+static void doOnLine(int x0, int y0, int x1, int y1, F func)
+{
+    int dx = std::abs(x1 - x0);
+    int dy = std::abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy; // Initial error term
+
+    while (true)
+    {
+        func(x0, y0);
+
+        if (x0 == x1 && y0 == y1) {
+            break; // Reached endpoint
+        }
+
+        int e2 = 2 * err; // Double the error for comparison
+
+        if (e2 > -dy)
+        {
+            err -= dy;
+            x0 += sx;
+        }
+
+        if (e2 < dx)
+        {
+            err += dx;
+            y0 += sy;
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -227,7 +342,27 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
     if (!pLevel)
         return;
 
+    auto previousCursor = mCursor;
     mCursor = pLevel->boundPixelToLevel(ScreenCoords(this, event).toLevel());
+
+    if (event->buttons().testFlag(Qt::MouseButton::LeftButton) ||
+        event->buttons().testFlag(Qt::MouseButton::RightButton))
+    {
+        TileId id = event->buttons().testFlag(Qt::MouseButton::LeftButton) ? mCurrentTileId : Tile::Void;
+
+        //Draw or erase
+        QPoint tileFrom = pLevel->boundPixelToLevel(previousCursor).tile();
+        QPoint tileTo = pLevel->boundPixelToLevel(mCursor).tile();
+
+        doOnLine(tileFrom.x(), tileFrom.y(), tileTo.x(), tileTo.y(), [this, pLevel, id](int x, int y)
+            {
+                setLevelTile(this, pLevel, QPoint(x, y), id);
+            }
+        );
+    }
+
+
+
 
     if (mDragging)
     {
@@ -280,7 +415,7 @@ void EditorWidget::mouseReleaseEvent(QMouseEvent *event)
     if (!level())
         return;
 
-    if (mDragging)
+    if (mDragging && !event->buttons().testFlag(Qt::MouseButton::MiddleButton))
     {
         if (mEditor->config().smoothDragSpeed() > 0)
         {
@@ -452,6 +587,34 @@ void EditorWidget::onTilesetChanged()
 
     //Force refresh
     update();
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::onTilesChanged()
+{
+    auto pLevel = level();
+
+    if (mTileRenderer && pLevel)
+    {
+        mTileRenderer->clearCache();
+    }
+
+    if (mMinimapRenderer)
+    {
+        auto pImage = mMinimapRenderer->image();
+        if (pImage)
+            pImage->bits(); //does something
+    }
+
+    update();
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::onTilesChanged(const LevelBounds& bounds)
+{
+    onTilesChanged();
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -4,6 +4,7 @@
 #include "UiGlobal.h"
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
+#include <QtOpenGL/QOpenGLFunctions_3_3_Core>
 
 #include <QtCore/QPoint>
 #include <QtCore/QPointF>
@@ -48,6 +49,7 @@ signals:
 protected:
     void initializeGL();
     void resizeGL(int width, int height);
+    void paintGL();
 
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

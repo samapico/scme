@@ -60,6 +60,10 @@ public:
 
     inline float tileYf() const { return QPointF::y() / TILE_H; }
 
+    inline QPoint tile() const { return QPoint(tileX(), tileY()); }
+
+    inline QPointF tilef() const { return QPointF(tileXf(), tileYf()); }
+
     inline static LevelCoords fromTile(int x, int y) { return LevelCoords(tileToPixel(x, TILE_W), tileToPixel(y, TILE_H)); }
 
     inline static LevelCoords fromTile(float x, float y) { return LevelCoords(tileToPixel(x, TILE_W), tileToPixel(y, TILE_H)); }

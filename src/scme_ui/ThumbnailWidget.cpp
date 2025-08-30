@@ -49,6 +49,9 @@ QSize ThumbnailWidget::sizeHint() const
 void ThumbnailWidget::initializeGL()
 {
     QOpenGLWidget::initializeGL();
+
+    glClearColor(0, 0, 0, 1);
+
     /*
     qglClearColor(QColor::fromCmykF(0.39, 0.39, 0.0, 0.0));
 
@@ -67,18 +70,31 @@ void ThumbnailWidget::initializeGL()
 }
 
 //////////////////////////////////////////////////////////////////////////
-/*
+
 void ThumbnailWidget::paintGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    glTranslatef(0.0, 0.0, -10.0);
+    QOpenGLWidget::paintGL();
+
+
+    QPainter painter(this);
+    painter.beginNativePainting();
+
+    drawLevelBounds(painter);
+
+    drawViewBounds(painter);
+
+#ifdef _DEBUG
+    drawDebug(painter);
+#endif
+
+    painter.endNativePainting();
+
     //glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
     //glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
     //glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
     //logo->draw();
 }
-*/
+
 //////////////////////////////////////////////////////////////////////////
 
 void ThumbnailWidget::resizeGL(int width, int height)
@@ -179,20 +195,7 @@ void ThumbnailWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void ThumbnailWidget::paintEvent(QPaintEvent *event)
 {
-    QPainter painter;
-    painter.begin(this);
-
-    painter.fillRect(event->rect(), QColor(Qt::black));
-
-    drawLevelBounds(painter);
-
-    drawViewBounds(painter);
-
-#ifdef _DEBUG
-    drawDebug(painter);
-#endif
-
-    painter.end();
+    QOpenGLWidget::paintEvent(event);
 }
 
 //////////////////////////////////////////////////////////////////////////

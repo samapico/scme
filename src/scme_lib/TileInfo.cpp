@@ -9,6 +9,11 @@ using namespace ::SCME;
 
 ///////////////////////////////////////////////////////////////////////////
 
+TilePixelColorPalette TilePixelColorPalette::sCurrentPalette = getDefaultPalette();
+
+
+///////////////////////////////////////////////////////////////////////////
+
 QColor TileInfo::pixelColor() const
 {
     return pixelColor(mPixelColor);
@@ -26,8 +31,10 @@ QColor TileInfo::pixelColor(PixelColor paletteColor)
 
 TilePixelColorPalette TilePixelColorPalette::getDefaultPalette()
 {
+    qDebug() << "@getDefaultPalette()";
+
     return { {
-        QColor(             ), // PixelColorVoid
+        QColor(Qt::transparent), // PixelColorVoid
         QColor(192, 192, 192), // PixelColorNormal   (gray)
         QColor(  0,   0, 255), // PixelColorDoor     (blue)
         QColor(255, 255,   0), // PixelColorFlag     (yellow)
@@ -38,8 +45,6 @@ TilePixelColorPalette TilePixelColorPalette::getDefaultPalette()
         QColor(255, 255,   0), // PixelColorSpecial  (magenta)
     } };
 };
-
-TilePixelColorPalette TilePixelColorPalette::sCurrentPalette = getDefaultPalette();
 
 //////////////////////////////////////////////////////////////////////////
 

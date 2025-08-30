@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     }
 
     Editor w(parsedArgs.filename);
-    w.show();
+    w.showMaximized();
 
     /// Parse arguments
     a.arguments();

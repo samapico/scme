@@ -31,6 +31,7 @@ namespace SCME {
 class Editor;
 class FrameCounter;
 class TileRenderer;
+class MinimapRenderer;
 class LevelData;
 
 
@@ -91,9 +92,16 @@ public slots:
 
     void setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom);
 
+    void onTilesChanged();
+
+    void onTilesChanged(const LevelBounds& bounds);
+
     void onLevelChanged();
 
     void onTilesetChanged();
+
+    /// @todo Remove this when we have an actual selectable tileset
+    void setCurrentTileId(TileId id) { mCurrentTileId = id; }
 
 signals:
 
@@ -151,8 +159,11 @@ private:
     bool mSmoothViewStopPan = false;
 
     std::unique_ptr<TileRenderer> mTileRenderer;
+    std::unique_ptr<MinimapRenderer> mMinimapRenderer;
 
     LevelCoords mCursor;
+
+    TileId mCurrentTileId = 1;
 };
 
 

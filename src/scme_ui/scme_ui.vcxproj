@@ -14,11 +14,13 @@
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorWidget.cpp" />
     <ClCompile Include="FrameCounter.cpp" />
+    <ClCompile Include="LambdaEventFilter.cpp" />
     <ClCompile Include="ScreenCoords.cpp" />
     <ClCompile Include="ThumbnailWidget.cpp" />
     <ClCompile Include="ViewBounds.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LambdaEventFilter.h" />
     <ClInclude Include="ScreenCoords.h" />
     <ClInclude Include="ViewBounds.h" />
     <QtMoc Include="Editor.h" />

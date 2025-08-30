@@ -4,6 +4,8 @@
 #include "Global.h"
 
 
+#include "Tile.h"
+
 #include <QtCore/QSize>
 #include <QtGui/QColor>
 
@@ -23,6 +25,7 @@ class SCME_LIB_DLL TileInfo
 {
 public:
 
+    /// Color category that can be assigned to each tile number
     enum PixelColor
     {
         PixelColorVoid,
@@ -86,7 +89,20 @@ constexpr TileInfoArray initTileInfo()
     {
         tileInfoArray[i].mIsSolid = true;
 
-        tileInfoArray[i].mPixelColor = (i <= TILESET_COUNT) ? TileInfo::PixelColorNormal : TileInfo::PixelColorSpecial;
+        TileInfo::PixelColor c = TileInfo::PixelColorVoid;
+
+        if (i >= Tile::SpecialTileDoorA1 && i <= Tile::SpecialTileDoorB4)
+            c = TileInfo::PixelColorDoor;
+        else if (i == Tile::SpecialTileGoal)
+            c = TileInfo::PixelColorGoal;
+        else if (i == Tile::SpecialTileFlag)
+            c = TileInfo::PixelColorFlag;
+        else if (i == Tile::SpecialTileSafety)
+            c = TileInfo::PixelColorSafe;
+        else
+            c = (i <= TILESET_COUNT) ? TileInfo::PixelColorNormal : TileInfo::PixelColorSpecial;
+
+        tileInfoArray[i].mPixelColor = c;
     }
 
     return tileInfoArray;
