@@ -22,8 +22,7 @@ static void Fill(Array2D<Tile>& map, const QRect& area, TileId value)
 
 //////////////////////////////////////////////////////////////////////////
 
-LevelData::LevelData() :
-    mIsDirty(false)
+LevelData::LevelData()
 {
     mBounds = LevelBounds(LevelCoords(0, 0), QSizeF(size().width() * TILE_W, size().height() * TILE_H));
 
@@ -90,7 +89,7 @@ bool LevelData::load(QDataStream& in)
 
     ExtraLevelData loadedExtraLevelData;
     Tileset loadedTileset;
-    MapTiles loadedTiles;
+    LevelTiles loadedTiles;
 
 
     //Look for eLVl header
@@ -482,7 +481,6 @@ bool LevelData::load(QDataStream& in)
     if (in.status() == QDataStream::Status::Ok)
     {
         //Assign loaded data
-        mIsDirty = false;
 
         mTiles = loadedTiles;
         mExtraLevelData = loadedExtraLevelData;
@@ -500,8 +498,6 @@ bool LevelData::load(QDataStream& in)
 
 bool LevelData::saveToFile(const QString& filepath) const
 {
-
-    mIsDirty = false;
 
     //     Sub SaveMap(path As String, Optional flags As saveFlags = SFdefault)
     // 'Saves the map
@@ -857,18 +853,4 @@ TileCoords LevelData::boundTileToLevel(const TileCoords& tileXY) const
 const Tileset& LevelData::tileset() const
 {
     return mTileset;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void LevelData::setDirty(bool b)
-{
-    mIsDirty = b;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-bool LevelData::isDirty() const
-{
-    return mIsDirty;
 }

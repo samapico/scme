@@ -50,6 +50,9 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
             update();
         });
 
+    connect(this, &EditorWidget::levelTilesChanged, this, &EditorWidget::onTilesChanged);
+    connect(this, &EditorWidget::levelTilesChangedArea, this, &EditorWidget::onTilesChangedArea);
+
 #ifdef NO_FPS_LIMIT
     QTimer* timerMaxFps = new QTimer(this);
     timerMaxFps->setTimerType(Qt::TimerType::CoarseTimer);
@@ -147,8 +150,6 @@ void EditorWidget::paintGL()
     if (!pLevel)
         return;
 
-    mMinimapRenderer->refreshMinimap(pLevel);
-
     {
         QPainter painter(this);
         painter.beginNativePainting();
@@ -177,29 +178,18 @@ void EditorWidget::paintGL()
 
     if (minimapRenderOpacity > 0.f)
     {
-        std::shared_ptr<QImage> img = mMinimapRenderer->image();
+        QPainter painter(this);
+        painter.setOpacity(minimapRenderOpacity);
 
-        if (img)
-        {
-            QPainter painter(this);
-            painter.beginNativePainting();
+        ScreenCoords screenTopLeft = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(0, 0)));
+        ScreenCoords screenBottomRight = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(width(), height())));
 
-            //Use exact pixel scale for 1:16 zoom (or more zoomed in), and use smooth interpolation when zoomed out more
-            painter.setRenderHint(QPainter::SmoothPixmapTransform, zoomFactor() < 1.f / 17.f);
-
-            painter.setOpacity(minimapRenderOpacity);
-
-            ScreenCoords screenTopLeft = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(0, 0)));
-            ScreenCoords screenBottomRight = boundScreenPixelToLevel(pLevel.get(), ScreenCoords(this, QPointF(width(), height())));
-
-            painter.drawImage(
-                QRectF(screenTopLeft, screenBottomRight),
-                *img,
-                QRectF(screenTopLeft.toLevel().tilef(), screenBottomRight.toLevel().tilef())
-            );
-
-            painter.endNativePainting();
-        }
+        mMinimapRenderer->render(
+            painter,
+            pLevel.get(),
+            QRectF(screenTopLeft, screenBottomRight),
+            QRectF(screenTopLeft.toLevel().tilef(), screenBottomRight.toLevel().tilef()),
+            zoomFactor());
     }
 
     {
@@ -261,7 +251,7 @@ static void setLevelTile(EditorWidget* w, const std::shared_ptr<LevelData>& leve
     if (r.mId != id)
     {
         r.mId = id;
-        w->onTilesChanged();
+        w->levelTilesChanged(level.get()); //< signal
     }
 }
 
@@ -591,20 +581,18 @@ void EditorWidget::onTilesetChanged()
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::onTilesChanged()
+void EditorWidget::onTilesChanged(const LevelData* level)
 {
-    auto pLevel = level();
-
-    if (mTileRenderer && pLevel)
+    if (mTileRenderer && level)
     {
         mTileRenderer->clearCache();
     }
 
-    if (mMinimapRenderer)
+    if (level)
     {
-        auto pImage = mMinimapRenderer->image();
+        auto pImage = level->tiles().image();
         if (pImage)
-            pImage->bits(); //does something
+            pImage->bits();
     }
 
     update();
@@ -612,9 +600,10 @@ void EditorWidget::onTilesChanged()
 
 ///////////////////////////////////////////////////////////////////////////
 
-void EditorWidget::onTilesChanged(const LevelBounds& bounds)
+void EditorWidget::onTilesChangedArea(const LevelData* level, const LevelBounds& bounds)
 {
-    onTilesChanged();
+    /// @todo We can probably optimize with a partial refresh
+    onTilesChanged(level);
 }
 
 //////////////////////////////////////////////////////////////////////////

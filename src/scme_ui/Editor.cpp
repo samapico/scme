@@ -140,7 +140,8 @@ void Editor::initRadar()
 
         Q_ASSERT(mEditorWidget);
         connect(mThumbnailWidget, &ThumbnailWidget::doCenterView, mEditorWidget, &EditorWidget::setViewCenterSmooth, Qt::QueuedConnection);
-        connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawView, Qt::QueuedConnection);
+        connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawViewBounds, Qt::QueuedConnection);
+        connect(mEditorWidget, &EditorWidget::levelTilesChanged, mThumbnailWidget, &ThumbnailWidget::redrawLevel, Qt::QueuedConnection);
 
         ui->dockRadar->setWidget(mThumbnailWidget);
     }
@@ -260,7 +261,7 @@ bool Editor::closeLevel()
 {
     bool cancel = false;
 
-    if (mLevel && mLevel->isDirty())
+    if (mLevel && false /*@todo isDirty()?*/)
     {
         int result = QMessageBox::question(this, tr("Save changes"), tr("Save changes to the current level?"), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
 

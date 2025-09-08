@@ -20,6 +20,7 @@
     <ClCompile Include="ExtraLevelData.cpp" />
     <ClCompile Include="LevelData.cpp" />
     <ClCompile Include="LevelObject.cpp" />
+    <ClCompile Include="LevelTiles.cpp" />
     <ClCompile Include="MinimapRenderer.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Tile.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="Global.h" />
     <ClInclude Include="LevelData.h" />
     <ClInclude Include="LevelObject.h" />
+    <ClInclude Include="LevelTiles.h" />
     <ClInclude Include="MinimapRenderer.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Tile.h" />

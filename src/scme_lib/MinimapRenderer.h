@@ -4,18 +4,15 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "Global.h"
-#include "Tile.h"
-#include "Coords.h"
 
 
-#include "Renderer.h"
-
-#include <QtGui/QImage>
+//#include "Renderer.h"
 
 
 //////////////////////////////////////////////////////////////////////////
 
-class QOpenGLTexture;
+class QRectF;
+class QPainter;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -24,14 +21,13 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
-class Tileset;
-class LevelBounds;
 class LevelData;
+
 
 
 //////////////////////////////////////////////////////////////////////////
 
-class SCME_LIB_DLL MinimapRenderer : public Renderer
+class SCME_LIB_DLL MinimapRenderer /* : public Renderer*/
 {
 public:
 
@@ -42,20 +38,7 @@ public:
 
     void init();
 
-    void refreshMinimap(std::shared_ptr<LevelData> level);
-    void refreshMinimap(std::shared_ptr<LevelData> level, const LevelBounds& bounds);
-
-    std::shared_ptr<QImage> image() const;
-
-    void render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor);
-
-protected:
-
-    void allocateImage(std::shared_ptr<LevelData> level);
-
-    std::shared_ptr<QImage> mRadarImage;
-
-    std::shared_ptr<LevelData> mLevel; //Keep instance of level to ensure the bytes used in mRadarImage remain valid
+    void render(QPainter& painter, const LevelData* level, const QRectF& screenPixels, const QRectF& mapTiles, float zoomFactor);
 };
 
 

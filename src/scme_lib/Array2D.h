@@ -4,7 +4,8 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "Global.h"
-#include <QtCore/QVector>
+
+#include <vector>
 #include <QtCore/QSize>
 
 
@@ -15,7 +16,7 @@ namespace SCME {
 //////////////////////////////////////////////////////////////////////////
 
 template<typename Data>
-class Array2D : private QVector<Data>
+class Array2D : private std::vector<Data>
 {
 public:
 
@@ -23,11 +24,13 @@ public:
     Array2D(int width, int height);
     ~Array2D() = default;
 
+    Array2D<Data>& operator=(const Array2D<Data>& rhs);
+
     inline int width() const;
 
     inline int height() const;
 
-    inline QSize size() const;
+    inline QSize size2d() const;
 
     inline const Data& get(const QPoint& xy) const;
 
@@ -51,7 +54,7 @@ public:
 
     inline Data* rowPtr(int y);
 
-    Array2D<Data> copyRect(int left, int top, int right, int bottom) const;
+    //Array2D<Data> copyRect(int left, int top, int right, int bottom) const;
 
     bool isInBounds(int x, int y) const;
 
@@ -59,7 +62,7 @@ public:
 
 protected:
 
-    Array2D(const QVector<Data>& data, int width);
+    Array2D(const std::vector<Data>& data, int width);
 
     void resizeData();
 
@@ -82,17 +85,31 @@ Array2D<Data>::Array2D(int width, int height) :
 }
 
 template<typename Data>
-Array2D<Data>::Array2D(const QVector<Data>& data, int width) :
-    QVector<Data>(data),
-    mDims(width, data.size() / width)
+Array2D<Data>::Array2D(const std::vector<Data>& data, int width) :
+    std::vector<Data>(data),
+    mDims(width, static_cast<int>(data.size() / width))
 {
-    Q_ASSERT(data.size() % width == 0);
+    Q_ASSERT(data.size() < std::numeric_limits<int>::max());
+    Q_ASSERT(static_cast<int>(data.size()) % width == 0);
+}
+
+template<typename Data>
+Array2D<Data>& Array2D<Data>::operator=(const Array2D<Data>& rhs)
+{
+    std::vector<Data>::operator=(rhs);
+    mDims = rhs.mDims;
+
+    Q_ASSERT(this->rowPtr(0) == this->data());
+    Q_ASSERT(this->rowPtr(0) != rhs.rowPtr(0));
+    Q_ASSERT(this->data() != rhs.data());
+
+    return *this;
 }
 
 template<typename Data>
 void Array2D<Data>::resizeData()
 {
-    QVector<Data>::resize(mDims.width() * mDims.height());
+    std::vector<Data>::resize(mDims.width() * mDims.height());
 }
 
 template<typename Data>
@@ -144,33 +161,34 @@ inline int Array2D<Data>::height() const
 }
 
 template<typename Data>
-inline QSize Array2D<Data>::size() const
+inline QSize Array2D<Data>::size2d() const
 {
+    Q_ASSERT(mDims.width() * mDims.height() == this->size());
     return mDims;
 }
 
 template<typename Data>
 inline const Data& Array2D<Data>::operator()(int x, int y) const
 {
-    return QVector<Data>::at(width()* y + x);
+    return std::vector<Data>::at(width()* y + x);
 }
 
 template<typename Data>
 inline const Data& Array2D<Data>::operator()(const QPoint& xy) const
 {
-    return QVector<Data>::at(width() * xy.y() + xy.x());
+    return std::vector<Data>::at(width() * xy.y() + xy.x());
 }
 
 template<typename Data>
 inline Data& Array2D<Data>::operator()(int x, int y)
 {
-    return QVector<Data>::operator[](width() * y + x);
+    return std::vector<Data>::operator[](width() * y + x);
 }
 
 template<typename Data>
 inline Data& Array2D<Data>::operator()(const QPoint& xy)
 {
-    return QVector<Data>::operator[](width()* xy.y() + xy.x());
+    return std::vector<Data>::operator[](width()* xy.y() + xy.x());
 }
 
 template<typename Data>
@@ -178,40 +196,40 @@ inline const Data* Array2D<Data>::rowPtr(int y) const
 {
     Q_ASSERT(isInBounds(0, y));
 
-    return QVector<Data>::constData() + y * width();
+    return std::vector<Data>::data() + y * width();
 }
 
 template<typename Data>
 inline Data* Array2D<Data>::rowPtr(int y)
 {
-    return QVector<Data>::data() + y * width();
+    return std::vector<Data>::data() + y * width();
 }
 
-template<typename Data>
-inline Array2D<Data> Array2D<Data>::copyRect(int left, int top, int right, int bottom) const
-{
-    Q_ASSERT(left >= 0);
-    Q_ASSERT(top >= 0);
-    Q_ASSERT(right >= left);
-    Q_ASSERT(bottom >= top);
-    Q_ASSERT(right < width());
-    Q_ASSERT(bottom < height());
-
-    int w = right - left + 1;
-    int h = bottom - top + 1;
-
-    /// Copy the relevant part of each row in a QVector
-    QVector<Data> copiedCells;
-    copiedCells.reserve(w * h);
-
-    for (int row = top; row <= bottom; row++)
-    {
-        copiedCells.append(QVector<Data>::mid(row * width() + left, w));
-    }
-
-    /// Initialize Array2D with the QVector
-    return Array2D<Data>(copiedCells, w);
-}
+//template<typename Data>
+//inline Array2D<Data> Array2D<Data>::copyRect(int left, int top, int right, int bottom) const
+//{
+//    Q_ASSERT(left >= 0);
+//    Q_ASSERT(top >= 0);
+//    Q_ASSERT(right >= left);
+//    Q_ASSERT(bottom >= top);
+//    Q_ASSERT(right < width());
+//    Q_ASSERT(bottom < height());
+//
+//    int w = right - left + 1;
+//    int h = bottom - top + 1;
+//
+//    /// Copy the relevant part of each row in a QVector
+//    std::vector<Data> copiedCells;
+//    copiedCells.reserve(w * h);
+//
+//    for (int row = top; row <= bottom; row++)
+//    {
+//        copiedCells.append(QVector<Data>::mid(row * width() + left, w));
+//    }
+//
+//    /// Initialize Array2D with the QVector
+//    return Array2D<Data>(copiedCells, w);
+//}
 
 template<typename Data>
 inline bool Array2D<Data>::isInBounds(int x, int y) const

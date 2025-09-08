@@ -21,7 +21,9 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
-class SCME_LIB_DLL Editor;
+class Editor;
+class LevelData;
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -38,13 +40,15 @@ public:
 
 public slots:
 
-    void  redrawThumbnail();
+    void redrawThumbnail();
 
-    void  redrawView(const LevelBounds& viewBounds);
+    void redrawViewBounds(const LevelBounds& viewBounds);
+
+    void redrawLevel(const LevelData* level);
 
 signals:
 
-    void  doCenterView(const LevelCoords& center);
+    void doCenterView(const LevelCoords& center);
 
 protected:
     void initializeGL();
@@ -64,7 +68,7 @@ protected:
 
     void drawViewBounds(QPainter& painter);
 
-    void drawObjects(QPainter& painter);
+    void drawLevel(QPainter& painter);
 
 private:
 

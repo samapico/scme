@@ -16,6 +16,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_ui", "src\scme_ui\scme
 		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_tests", "src\scme_tests\scme_tests.vcxproj", "{CC24069C-77D2-494C-BAFB-DF8730902F15}"
+	ProjectSection(ProjectDependencies) = postProject
+		{54D6E390-D523-49A0-B584-086C9CAC2AE9} = {54D6E390-D523-49A0-B584-086C9CAC2AE9}
+		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -34,6 +40,10 @@ Global
 		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Debug|x64.Build.0 = Debug|x64
 		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Release|x64.ActiveCfg = Release|x64
 		{54D6E390-D523-49A0-B584-086C9CAC2AE9}.Release|x64.Build.0 = Release|x64
+		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Debug|x64.ActiveCfg = Debug|x64
+		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Debug|x64.Build.0 = Debug|x64
+		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Release|x64.ActiveCfg = Release|x64
+		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

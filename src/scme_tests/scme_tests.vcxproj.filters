@@ -23,8 +23,39 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="scme_tests.cpp">
-      <Filter>Source Files</Filter>
+    <QtMoc Include="Test_Checksums.h">
+      <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="Test_Array2D.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Test_LevelData.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AutoTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UnitTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main_tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test_Array2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test_Checksums.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UnitTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test_LevelData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -17,7 +17,7 @@ ThumbnailWidget::ThumbnailWidget(Editor* editor, QWidget *parent) :
     QOpenGLWidget(parent),
     mEditor(editor),
     mThumbnailArea(0, 0, 100, 100),
-    mLevelBoundsPen(QColor(Qt::white)),
+    mLevelBoundsPen(QColor(Qt::darkMagenta)),
     mViewBoundsPen (QColor(255, 0, 0, 128))
 {
     setMouseTracking(true);
@@ -79,7 +79,10 @@ void ThumbnailWidget::paintGL()
     QPainter painter(this);
     painter.beginNativePainting();
 
+
     drawLevelBounds(painter);
+
+    drawLevel(painter);
 
     drawViewBounds(painter);
 
@@ -202,6 +205,8 @@ void ThumbnailWidget::paintEvent(QPaintEvent *event)
 
 void ThumbnailWidget::drawDebug(QPainter& painter)
 {
+    painter.save();
+
     QString str;
 
     //painter.setPen(QColor(Qt::green));
@@ -211,22 +216,53 @@ void ThumbnailWidget::drawDebug(QPainter& painter)
     //    QString::number(mZoomFactor, 'f', 3));
     //
     //painter.drawText(0, 10, str);
+
+    painter.restore();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void ThumbnailWidget::drawLevelBounds(QPainter& painter)
 {
+    painter.save();
+
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setPen(mLevelBoundsPen);
 
     painter.drawRect(mThumbnailArea);
+
+    painter.restore();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void ThumbnailWidget::drawLevel(QPainter& painter)
+{
+    auto pLevel = mEditor ? mEditor->level() : nullptr;
+    if (!pLevel)
+        return;
+
+    const QImage* img = pLevel->tiles().image();
+    if (!img)
+        return;
+
+    painter.save();
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.setRenderHint(QPainter::LosslessImageRendering, true);
+
+    painter.drawImage(mThumbnailArea, *img);
+
+    painter.restore();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void ThumbnailWidget::drawViewBounds(QPainter& painter)
 {
+    painter.save();
+
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(mViewBoundsPen);
 
@@ -249,6 +285,8 @@ void ThumbnailWidget::drawViewBounds(QPainter& painter)
         painter.drawLine(c - QPointF(crosshairSize, 0), c + QPointF(crosshairSize, 0));
         painter.drawLine(c - QPointF(0, crosshairSize), c + QPointF(0, crosshairSize));
     }
+
+    painter.restore();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -260,10 +298,17 @@ void ThumbnailWidget::redrawThumbnail()
 
 //////////////////////////////////////////////////////////////////////////
 
-void ThumbnailWidget::redrawView(const LevelBounds& viewBounds)
+void ThumbnailWidget::redrawViewBounds(const LevelBounds& viewBounds)
 {
     mViewBounds = viewBounds;
 
+    update();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void ThumbnailWidget::redrawLevel(const LevelData* level)
+{
     update();
 }
 

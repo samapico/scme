@@ -7,6 +7,7 @@
 
 #include "Array2D.h"
 #include "Tile.h"
+#include "LevelTiles.h"
 #include "Tileset.h"
 #include "ExtraLevelData.h"
 #include "Coords.h"
@@ -27,16 +28,6 @@ class SCME_LIB_DLL LevelData
 {
 public:
 
-    class SCME_LIB_DLL MapTiles : public Array2D<Tile>
-    {
-    public:
-        MapTiles() :
-            Array2D<Tile>(MAP_SIZE)
-        {
-        }
-    };
-
-
     LevelData();
     virtual ~LevelData();
 
@@ -44,15 +35,11 @@ public:
 
     bool saveToFile(const QString& filepath) const;
 
-    inline const Array2D<Tile>& tiles() const;
+    inline const LevelTiles& tiles() const;
 
-    inline Array2D<Tile>& tiles();
+    inline LevelTiles& tiles();
 
     const Tileset& tileset() const;
-
-    void setDirty(bool);
-
-    bool isDirty() const;
 
     inline QSize size() const;
 
@@ -91,15 +78,13 @@ protected:
 
     bool load(QDataStream& in);
 
-    MapTiles mTiles;
+    LevelTiles mTiles;
 
     LevelBounds mBounds;
 
     ExtraLevelData mExtraLevelData;
 
     Tileset mTileset;
-
-    mutable bool mIsDirty = false;
 };
 
 
@@ -107,7 +92,7 @@ protected:
 
 QSize LevelData::size() const
 {
-    return mTiles.size();
+    return mTiles.size2d();
 }
 
 
@@ -121,12 +106,14 @@ const LevelBounds& LevelData::bounds() const
 
 //////////////////////////////////////////////////////////////////////////
 
-Array2D<Tile>& SCME::LevelData::tiles()
+LevelTiles& SCME::LevelData::tiles()
 {
     return mTiles;
 }
 
-const Array2D<Tile>& SCME::LevelData::tiles() const
+//////////////////////////////////////////////////////////////////////////
+
+const LevelTiles& LevelData::tiles() const
 {
     return mTiles;
 }

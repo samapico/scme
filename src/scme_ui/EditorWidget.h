@@ -92,10 +92,6 @@ public slots:
 
     void setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom);
 
-    void onTilesChanged();
-
-    void onTilesChanged(const LevelBounds& bounds);
-
     void onLevelChanged();
 
     void onTilesetChanged();
@@ -106,6 +102,10 @@ public slots:
 signals:
 
     void viewMoved(const LevelBounds& viewBounds);
+
+    void levelTilesChanged(const LevelData* level);
+
+    void levelTilesChangedArea(const LevelData* level, const LevelBounds& bounds);
 
 protected:
     void initializeGL() override;
@@ -134,6 +134,10 @@ protected:
     void drawObjects(QPainter& painter, const LevelData* pLevel);
 
 private:
+
+    void onTilesChanged(const LevelData* level);
+
+    void onTilesChangedArea(const LevelData* level, const LevelBounds& bounds);
 
     QPointer<Editor> mEditor;
 

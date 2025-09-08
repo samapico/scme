@@ -2,6 +2,7 @@
 
 #include "Global.h"
 #include <QtCore/QDir>
+#include <QtCore/QSysInfo>
 #include <QtWidgets/QApplication>
 
 ///////////////////////////////////////////////////////////////////////////
@@ -44,6 +45,9 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    qDebug().noquote() << "Starting" << a.applicationName() << a.applicationVersion() << "...";
+    qDebug().noquote() << QSysInfo::prettyProductName() << QSysInfo::currentCpuArchitecture();
 
     Editor w(parsedArgs.filename);
     w.showMaximized();
