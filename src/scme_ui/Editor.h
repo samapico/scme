@@ -22,6 +22,7 @@ namespace SCME {
 
 class EditorWidget;
 class ThumbnailWidget;
+class TilesetWidget;
 class LevelData;
 
 /// @brief   Editor class
@@ -44,6 +45,8 @@ public:
     inline const EditorConfig& config() const;
 
     inline std::shared_ptr<LevelData> level() const;
+
+    TilesetWidget* tilesetWidget() const;
 
 public slots:
 
@@ -75,7 +78,7 @@ private:
 
     void initEditorWidget();
 
-    void initTileset();
+    void initTileset(const LevelData* level);
 
     void initRadar();
 

@@ -1,5 +1,7 @@
 #include "EditorWidget.h"
 
+#include "TilesetWidget.h"
+
 #include <QtGui/QPaintEvent>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QWheelEvent>
@@ -245,13 +247,15 @@ void EditorWidget::resizeGL( int width, int height )
 
 //////////////////////////////////////////////////////////////////////////
 
-static void setLevelTile(EditorWidget* w, const std::shared_ptr<LevelData>& level, const QPoint& tile, TileId id)
+static void setLevelTile(EditorWidget* w, const std::shared_ptr<LevelData>& level, const QPoint& tile, TileId id, bool doUpdate)
 {
     auto& r = level->tiles()(tile);
     if (r.mId != id)
     {
         r.mId = id;
-        w->levelTilesChanged(level.get()); //< signal
+
+        if (doUpdate)
+            w->levelTilesChanged(level.get()); //< signal
     }
 }
 
@@ -266,27 +270,20 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
 
     ScreenCoords clickScreenCoords(this, event);
 
-    /// @todo Start drag with specific mouse button(s)
-
-    if (event->buttons().testFlag(Qt::MouseButton::LeftButton))
-    {
-        //Draw
-        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
-        setLevelTile(this, pLevel, tile, mCurrentTileId);
-    }
-
-    if (event->buttons().testFlag(Qt::MouseButton::RightButton))
-    {
-        //Erase
-        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
-        setLevelTile(this, pLevel, tile, Tile::Void);
-    }
-
     if (event->buttons().testFlag(Qt::MouseButton::MiddleButton))
     {
         mDragStart = clickScreenCoords;
         mCenterOrig = viewCenter();
         mDragging = true;
+    }
+    else
+    {
+        /// @todo Start drag with specific mouse button(s)
+        TileId tileId = mEditor->tilesetWidget()->selection(event->button());
+
+        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
+        setLevelTile(this, pLevel, tile, tileId, true);
+
     }
 }
 
@@ -335,25 +332,6 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
     auto previousCursor = mCursor;
     mCursor = pLevel->boundPixelToLevel(ScreenCoords(this, event).toLevel());
 
-    if (event->buttons().testFlag(Qt::MouseButton::LeftButton) ||
-        event->buttons().testFlag(Qt::MouseButton::RightButton))
-    {
-        TileId id = event->buttons().testFlag(Qt::MouseButton::LeftButton) ? mCurrentTileId : Tile::Void;
-
-        //Draw or erase
-        QPoint tileFrom = pLevel->boundPixelToLevel(previousCursor).tile();
-        QPoint tileTo = pLevel->boundPixelToLevel(mCursor).tile();
-
-        doOnLine(tileFrom.x(), tileFrom.y(), tileTo.x(), tileTo.y(), [this, pLevel, id](int x, int y)
-            {
-                setLevelTile(this, pLevel, QPoint(x, y), id);
-            }
-        );
-    }
-
-
-
-
     if (mDragging)
     {
         //qDebug() << "Drag@ " << event->position();
@@ -361,7 +339,28 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
     }
     else
     {
-        update();
+        /// @todo Start drag with specific mouse button(s)
+        for (Qt::MouseButton mb : { Qt::MouseButton::LeftButton, Qt::MouseButton::RightButton })
+        {
+            if (event->buttons().testFlag(mb))
+            {
+                TileId tileId = mEditor->tilesetWidget()->selection(mb);
+
+                QPoint tileFrom = pLevel->boundPixelToLevel(previousCursor).tile();
+                QPoint tileTo = pLevel->boundPixelToLevel(mCursor).tile();
+
+                doOnLine(tileFrom.x(), tileFrom.y(), tileTo.x(), tileTo.y(), [this, pLevel, tileId](int x, int y)
+                    {
+                        setLevelTile(this, pLevel, QPoint(x, y), tileId, false);
+                    }
+                );
+
+                levelTilesChanged(pLevel.get());
+
+                //Useless to draw both left AND right tiles at the same time
+                break;
+            }
+        }
     }
 }
 
@@ -574,6 +573,8 @@ void EditorWidget::onTilesetChanged()
         mTileRenderer->clearCache();
         mTileRenderer->updateTileset(pLevel->tileset());
     }
+
+    emit levelTilesetChanged(pLevel.get());
 
     //Force refresh
     update();

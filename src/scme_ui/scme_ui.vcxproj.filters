@@ -44,6 +44,9 @@
     <ClCompile Include="LambdaEventFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TilesetWidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UiGlobal.h">
@@ -70,6 +73,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Editor.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="TilesetWidget.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

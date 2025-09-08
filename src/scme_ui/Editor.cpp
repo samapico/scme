@@ -42,30 +42,8 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
     connect(ui->actionSave_As, &QAction::triggered, this, qOverload<>(&Editor::saveLevelAs));
     connect(ui->actionClose  , &QAction::triggered, this, &Editor::closeLevel);
 
-    //[=](QObject* obj, QEvent* event)
-    ui->labelTileset->installEventFilter(new LambdaEventFilter([=](QObject* obj, QEvent* event) -> bool
-        {
-            if (event->type() == QEvent::MouseButtonPress)
-            {
-                auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
-
-                if (mouseEvent->button() == Qt::MouseButton::LeftButton)
-                {
-                    QPointF pos = mouseEvent->position();
-
-                    if (pos.x() >= 0 && pos.y() >= 0 && pos.x() < TILESET_W && pos.y() < TILESET_H)
-                    {
-                        int tileId = 1 + int(pos.x() / TILE_W) + int(pos.y() / TILE_H) * TILESET_COUNT_W;
-
-                        ui->tileId->setValue(tileId);
-                    }
-                }
-            }
-            return false;
-        },
-        this)
-    );
-
+    initEditorWidget();
+    initRadar();
 
     if (levelToOpen.isEmpty())
     {
@@ -89,6 +67,13 @@ Editor::Editor(QWidget* parent, Qt::WindowFlags flags) :
 
 Editor::~Editor()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+TilesetWidget* Editor::tilesetWidget() const
+{
+    return ui->tilesetWidget;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -123,7 +108,7 @@ void Editor::initEditorWidget()
         mEditorWidget = new EditorWidget(this);
         setCentralWidget(mEditorWidget);
 
-        connect(ui->tileId, &QSpinBox::valueChanged, mEditorWidget, &EditorWidget::setCurrentTileId);
+        connect(mEditorWidget, &EditorWidget::levelTilesetChanged, this, &Editor::initTileset);
     }
 }
 
@@ -131,10 +116,7 @@ void Editor::initEditorWidget()
 
 void Editor::initRadar()
 {
-    delete mThumbnailWidget;
-    mThumbnailWidget = 0;
-
-    if (mLevel)
+    if (!mThumbnailWidget)
     {
         mThumbnailWidget = new ThumbnailWidget(this);
 
@@ -149,12 +131,9 @@ void Editor::initRadar()
 
 //////////////////////////////////////////////////////////////////////////
 
-void Editor::initTileset()
+void Editor::initTileset(const LevelData* level)
 {
-    if (mLevel)
-        ui->labelTileset->setPixmap(QPixmap::fromImage(mLevel->tileset().image()));
-    else
-        ui->labelTileset->setPixmap(QPixmap());
+    ui->tilesetWidget->onTilesetChanged(level ? level->tileset() : Tileset());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -290,10 +269,6 @@ bool Editor::closeLevel()
 void Editor::onLevelLoaded()
 {
     qApp->setOverrideCursor(Qt::WaitCursor);
-
-    initEditorWidget();
-    initTileset();
-    initRadar();
 
     if (mEditorWidget)
     {

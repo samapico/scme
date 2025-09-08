@@ -96,12 +96,11 @@ public slots:
 
     void onTilesetChanged();
 
-    /// @todo Remove this when we have an actual selectable tileset
-    void setCurrentTileId(TileId id) { mCurrentTileId = id; }
-
 signals:
 
     void viewMoved(const LevelBounds& viewBounds);
+
+    void levelTilesetChanged(const LevelData* level);
 
     void levelTilesChanged(const LevelData* level);
 

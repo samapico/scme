@@ -38,6 +38,11 @@ namespace SCME {
 
     constexpr int TILESET_COUNT = TILESET_COUNT_W * TILESET_COUNT_H; ///< Total number of tiles in a tileset
 
+    constexpr int TILESET_EXTRA_COUNT_H = 4;
+    constexpr int TILESET_EXTRA_H = TILESET_EXTRA_COUNT_H * TILE_H;
+
+    constexpr QSize TILESET_SIZE_WITH_EXTRA = TILESET_SIZE + QSize(0, TILESET_EXTRA_H);
+
     constexpr int MAP_W = 1024;
     constexpr int MAP_H = 1024;
     constexpr QSize MAP_SIZE(MAP_W, MAP_H);
