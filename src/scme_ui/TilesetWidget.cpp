@@ -176,21 +176,7 @@ QPointF TilesetWidget::tileIdToWidgetCoord(TileId id) const
 
 void TilesetWidget::onTilesetChanged(const Tileset& tileset)
 {
-    //Load the extra tiles graphics once
-    static const QPixmap pxExtra_s(":/ui/tileset_special.bmp");
-
-    Q_ASSERT(pxExtra_s.width() == TILESET_W);
-    Q_ASSERT(pxExtra_s.height() == TILESET_EXTRA_H);
-
-    //Combine the level's tileset image with the extra tiles
-    QPixmap px(TILESET_SIZE_WITH_EXTRA);
-
-    QPainter painter(&px);
-
-    painter.drawPixmap(0, 0, QPixmap::fromImage(tileset.image()));
-    painter.drawPixmap(0, TILESET_H, pxExtra_s);
-
-    mCurrentTileset = px;
+    mCurrentTileset = tileset.pixmapWithExtraTiles();
 
     // Force widget redraw
     update();

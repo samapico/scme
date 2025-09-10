@@ -4,6 +4,7 @@
 #include "Global.h"
 
 #include <QtGui/QImage>
+#include <QtGui/QPixmap>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -83,6 +84,8 @@ public:
 
     void setDefault();
 
+    const QPixmap& pixmapWithExtraTiles() const;
+
     static bool load(QDataStream& in, Tileset& tileset, ExtraLevelData& out_eLVLdata);
 
     const BitmapFileHeader& fileHeader() const;
@@ -90,10 +93,14 @@ public:
 
 protected:
 
+    static QPixmap addExtraTilesToImage(const QImage& image);
+
     BitmapFileHeader mFileHeader;
     BitmapInfoHeader mInfoHeader;
 
     QImage mImage;
+
+    QPixmap mPixmapWithExtraTiles;
 
     bool mIsDefault;
 };

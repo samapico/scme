@@ -1,6 +1,7 @@
 #include "TileRenderer.h"
 
 #include "Tileset.h"
+#include "TileInfo.h"
 #include "Coords.h"
 #include "LevelData.h"
 
@@ -25,9 +26,47 @@ TileRenderer::~TileRenderer()
 
 void TileRenderer::clearCache()
 {
-    cachedInstances.clear();
-    cachedBoundsTopLeft = {};
-    cachedBoundsBottomRight = {};
+    mCachedInstances.clear();
+    mCachedBoundsTopLeft = {};
+    mCachedBoundsBottomRight = {};
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void TileRenderer::setTileQuadVertexAttributes(GLuint& layoutIndex)
+{
+    // aPos
+    glEnableVertexAttribArray(layoutIndex);
+    glVertexAttribPointer(layoutIndex, 2, GL_FLOAT, GL_FALSE, sizeof(TileQuad), (void*)0);
+    layoutIndex++;
+
+    // aUVUnit
+    glEnableVertexAttribArray(layoutIndex);
+    glVertexAttribPointer(layoutIndex, 2, GL_FLOAT, GL_FALSE, sizeof(TileQuad), (void*)(2 * sizeof(float)));
+    layoutIndex++;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void TileRenderer::setTileInstanceVertexAttributes(GLuint& layoutIndex)
+{
+    // iTileXY (2x short)
+    glEnableVertexAttribArray(layoutIndex);
+    glVertexAttribIPointer(layoutIndex, 2, GL_SHORT, sizeof(TileInstanceData), (void*)0);
+    glVertexAttribDivisor(layoutIndex, 1);
+    layoutIndex++;
+
+    // iTileIndex (1x unsigned short)
+    glEnableVertexAttribArray(layoutIndex);
+    glVertexAttribIPointer(layoutIndex, 1, GL_UNSIGNED_SHORT, sizeof(TileInstanceData), (void*)(2 * sizeof(int16_t)));
+    glVertexAttribDivisor(layoutIndex, 1);
+    layoutIndex++;
+
+    // iTileSizeMultiplier
+    glEnableVertexAttribArray(layoutIndex);
+    glVertexAttribIPointer(layoutIndex, 1, GL_UNSIGNED_SHORT, sizeof(TileInstanceData), (void*)(3 * sizeof(int16_t)));
+    glVertexAttribDivisor(layoutIndex, 1);
+    layoutIndex++;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,7 +77,7 @@ void TileRenderer::init(const Tileset& tileset)
 
     // --- Load tileset texture ---
     {
-        QImage img = tileset.image(); // 304x160 bitmap
+        QImage img = tileset.pixmapWithExtraTiles().toImage(); // 304x224 bitmap
 
         if (!img.isNull())
         {
@@ -49,7 +88,7 @@ void TileRenderer::init(const Tileset& tileset)
             mTexTileset->bind();
 
             Q_ASSERT(rgba.width() == TILESET_W);
-            Q_ASSERT(rgba.height() == TILESET_H);
+            Q_ASSERT(rgba.height() == TILESET_WITH_EXTRA_H);
 
             mTexTileset->setSize(rgba.width(), rgba.height());
             mTexTileset->setFormat(QOpenGLTexture::RGBA8_UNorm);
@@ -74,8 +113,7 @@ void TileRenderer::init(const Tileset& tileset)
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
 
-    struct V { float x, y; float u, v; };
-    V quad[4] = {
+    TileQuad quad[4] = {
         {     0,      0, 0, 0},
         {TILE_W,      0, 1, 0},
         {     0, TILE_H, 0, 1},
@@ -86,28 +124,58 @@ void TileRenderer::init(const Tileset& tileset)
     glBindBuffer(GL_ARRAY_BUFFER, quadVbo_);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
 
+    GLuint dynamicVbaLayout = 0;
     // aPos
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(V), (void*)0);
-
     // aUVUnit
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(V), (void*)(2 * sizeof(float)));
+    setTileQuadVertexAttributes(dynamicVbaLayout);
 
     // --- Instance buffer ---
     glGenBuffers(1, &instanceVbo_);
     glBindBuffer(GL_ARRAY_BUFFER, instanceVbo_);
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW); // we’ll resize per frame
 
-    // iTileXY (2x unsigned short)
-    glEnableVertexAttribArray(2);
-    glVertexAttribIPointer(2, 2, GL_UNSIGNED_SHORT, sizeof(TileInstanceData), (void*)0);
-    glVertexAttribDivisor(2, 1);
+    // iTileXY (2x short)
+    // iTileIndex (1x unsigned short)
+    // iTileSizeMultiplier
+    setTileInstanceVertexAttributes(dynamicVbaLayout);
 
-    // iTileIndex (1x unsigned short promoted to uint)
-    glEnableVertexAttribArray(3);
-    glVertexAttribIPointer(3, 1, GL_UNSIGNED_SHORT, sizeof(TileInstanceData), (void*)(2 * sizeof(uint16_t)));
-    glVertexAttribDivisor(3, 1);
+    // --- Static map border instances ---
+    std::vector<TileInstanceData> borderTiles;
+    borderTiles.reserve(BORDER_TILE_COUNT);
+
+    for (int16_t x = -1; x < MAP_W + 1; x++) //horizontal border, top and bottom (including corners)
+    {
+        borderTiles.push_back(TileInstanceData{ x, (int16_t)-1, (uint16_t)(Tile::SpecialTileMapBorder - 1), (uint16_t)1 });
+        borderTiles.push_back(TileInstanceData{ x, (int16_t)MAP_H, (uint16_t)(Tile::SpecialTileMapBorder - 1), (uint16_t)1 });
+    }
+
+    for (int16_t y = 0; y < MAP_H; y++) //vertical border, left and right (excluding corners)
+    {
+        borderTiles.push_back(TileInstanceData{ (int16_t)-1,    y, (uint16_t)(Tile::SpecialTileMapBorder - 1), (uint16_t)1 });
+        borderTiles.push_back(TileInstanceData{ (int16_t)MAP_W, y, (uint16_t)(Tile::SpecialTileMapBorder - 1), (uint16_t)1 });
+    }
+    Q_ASSERT(borderTiles.size() == BORDER_TILE_COUNT);
+
+    glGenVertexArrays(1, &borderVao_);
+    glBindVertexArray(borderVao_);
+
+    // Reuse the same quad VBO bound at attrib 0/1 (pos/uv) as in your tile renderer:
+    glBindBuffer(GL_ARRAY_BUFFER, quadVbo_);
+
+
+    GLuint borderVbaLayout = 0;
+    // aPos
+    // aUVUnit
+    setTileQuadVertexAttributes(borderVbaLayout);
+
+    glGenBuffers(1, &borderVbo_);
+    glBindBuffer(GL_ARRAY_BUFFER, borderVbo_);
+    glBufferData(GL_ARRAY_BUFFER, borderTiles.size() * sizeof(TileInstanceData), borderTiles.data(), GL_STATIC_DRAW);
+
+    // iTileXY (2x short)
+    // iTileIndex (1x unsigned short)
+    // iTileSizeMultiplier
+    setTileInstanceVertexAttributes(borderVbaLayout);
 
     glBindVertexArray(0);
 }
@@ -118,14 +186,14 @@ void TileRenderer::updateTileset(const Tileset& tileset)
 {
     Q_ASSERT(mTexTileset);
 
-    QImage img = tileset.image(); // 304x160 bitmap
+    QImage img = tileset.pixmapWithExtraTiles().toImage(); // 304x224 bitmap
 
     if (!img.isNull())
     {
         QImage rgba = img.convertToFormat(QImage::Format_RGBA8888);
 
         Q_ASSERT(rgba.width() == TILESET_W);
-        Q_ASSERT(rgba.height() == TILESET_H);
+        Q_ASSERT(rgba.height() == TILESET_WITH_EXTRA_H);
 
         mTexTileset->bind();
         mTexTileset->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, rgba.constBits());
@@ -141,31 +209,48 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
     if (!level)
         return;
 
+    glPushAttrib(GL_ENABLE_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+
+    int tx0 = 0;
+    int ty0 = 0;
+    int tx1 = MAP_W - 1;
+    int ty1 = MAP_H - 1;
+
     // Prevent shimmering when zooming by forcing the pixel boundaries to be exact
     LevelBounds visibleAreaSnapped = visibleArea;
-    //visibleAreaSnapped.setLeft(std::floor(visibleAreaSnapped.left()));
-    //visibleAreaSnapped.setTop(std::floor(visibleAreaSnapped.top()));
 
-    int tx0 = visibleAreaSnapped.tileLeft();
-    int ty0 = visibleAreaSnapped.tileTop();
-    int tx1 = visibleAreaSnapped.tileRight();
-    int ty1 = visibleAreaSnapped.tileBottom();
+    if (true /* && config.Render.RenderAllTiles*/)
+    {
+        // Let's just build the instances for ALL the tiles
+        // On most frames we'll be able to reuse it to save time,
+        // When the level changes the cache will be cleared and it will be rebuilt
+    }
+    else
+    {
+        tx0 = visibleAreaSnapped.tileLeft();
+        ty0 = visibleAreaSnapped.tileTop();
+        tx1 = visibleAreaSnapped.tileRight();
+        ty1 = visibleAreaSnapped.tileBottom();
 
-    level->boundTileToLevel(tx0, ty0);
-    level->boundTileToLevel(tx1, ty1);
+        level->boundTileToLevel(tx0, ty0);
+        level->boundTileToLevel(tx1, ty1);
+    }
 
     TileCoords tbTopLeft(tx0, ty0);
     TileCoords tbBottomRight(tx1, ty1);
 
-    // Build instance data for visible tiles
-    std::vector<TileInstanceData> instances;
-
-    if (tbTopLeft == cachedBoundsTopLeft && tbBottomRight == cachedBoundsBottomRight)
+    if (tbTopLeft == mCachedBoundsTopLeft && tbBottomRight == mCachedBoundsBottomRight)
     {
-        instances = cachedInstances;
+        //use cached instances as is
     }
     else
     {
+        // Build instance data for visible tiles
+        // Use the previous cache's capacity
+        std::vector<TileInstanceData> instances(std::move(mCachedInstances));
         instances.reserve((tx1 - tx0 + 1) * (ty1 - ty0 + 1));
 
         for (int y = ty0; y <= ty1; ++y)
@@ -176,17 +261,17 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
             {
                 TileId v = row[x];
 
-                if (v && v <= TILESET_COUNT)
+                if (v /* && config.DrawSpecialTiles || v <= TILESET_COUNT */)
                     instances.push_back(TileInstanceData{
-                        (uint16_t)x, (uint16_t)y, (uint16_t)(v - 1), (uint16_t)0
+                        (int16_t)x, (int16_t)y, (uint16_t)(v - 1), (uint16_t)TileInfoDict[v].mSize
                         });
                 //else empty tile
             }
         }
 
-        cachedInstances = instances;
-        cachedBoundsTopLeft = tbTopLeft;
-        cachedBoundsBottomRight = tbBottomRight;
+        mCachedInstances = std::move(instances);
+        mCachedBoundsTopLeft = tbTopLeft;
+        mCachedBoundsBottomRight = tbBottomRight;
     }
 
     glBindVertexArray(vao_);
@@ -194,8 +279,8 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
     // Update instance buffer
     glBindBuffer(GL_ARRAY_BUFFER, instanceVbo_);
     glBufferData(GL_ARRAY_BUFFER,
-        instances.size() * sizeof(TileInstanceData),
-        instances.empty() ? nullptr : instances.data(),
+        mCachedInstances.size() * sizeof(TileInstanceData),
+        mCachedInstances.empty() ? nullptr : mCachedInstances.data(),
         GL_DYNAMIC_DRAW);
 
     // Bind program and set uniforms
@@ -204,20 +289,27 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
     QMatrix4x4 mvp = visibleAreaSnapped.orthoPixels();
 
     mProgram.setUniformValue("uMVP", mvp);
-    mProgram.setUniformValue("uAtlasSize", QVector2D(TILESET_W, TILESET_H));
+    mProgram.setUniformValue("uAtlasSize", QVector2D(TILESET_W, TILESET_WITH_EXTRA_H));
     mProgram.setUniformValue("uTilePx", QVector2D(TILE_W, TILE_H));
 
     GLint loc = mProgram.uniformLocation("uGridDim");
-    glUniform2ui(loc, TILESET_COUNT_W, TILESET_COUNT_H);
+    glUniform2ui(loc, TILESET_COUNT_W, TILESET_COUNT_H + TILESET_EXTRA_COUNT_H);
 
     mProgram.setUniformValue("uAtlas", 0);
     glActiveTexture(GL_TEXTURE0);
     mTexTileset->bind();
 
     // Draw 4-vertex quad instanced N times
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(instances.size()));
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(mCachedInstances.size()));
+
+
+    // todo: if (config.Render.DrawBorder)
+    glBindVertexArray(borderVao_);
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(BORDER_TILE_COUNT));
 
     mTexTileset->release();
     mProgram.release();
     glBindVertexArray(0);
+
+    glPopAttrib();
 }

@@ -4,6 +4,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QIODevice>
+#include <QtGui/QPainter>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -52,6 +53,13 @@ bool Tileset::isDefault() const
 
 //////////////////////////////////////////////////////////////////////////
 
+const QPixmap& Tileset::pixmapWithExtraTiles() const
+{
+    return mPixmapWithExtraTiles;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void Tileset::setImage(const QImage& image)
 {
     mIsDefault = false;
@@ -65,6 +73,28 @@ void Tileset::setDefault()
     mIsDefault = mImage.load(":/graphics/tiles.bmp");
     Q_ASSERT(mIsDefault);
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+QPixmap Tileset::addExtraTilesToImage(const QImage& image)
+{
+    //Load the extra tiles graphics once
+    static const QPixmap pxExtra_s(":/ui/tileset_special.bmp");
+
+    Q_ASSERT(pxExtra_s.width() == TILESET_W);
+    Q_ASSERT(pxExtra_s.height() == TILESET_EXTRA_H);
+
+    //Combine the level's tileset image with the extra tiles
+    QPixmap px(TILESET_SIZE_WITH_EXTRA);
+
+    QPainter painter(&px);
+
+    painter.drawPixmap(0, 0, QPixmap::fromImage(image));
+    painter.drawPixmap(0, TILESET_H, pxExtra_s);
+
+    return px;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -137,6 +167,7 @@ bool Tileset::load(QDataStream& in, Tileset& tileset, ExtraLevelData& out_eLVLda
     in.device()->seek(tileset.mFileHeader.bfSize);
 
     tileset.mIsDefault = false;
+    tileset.mPixmapWithExtraTiles = addExtraTilesToImage(tileset.mImage);
 
     return in.status() == QDataStream::Status::Ok;
 }

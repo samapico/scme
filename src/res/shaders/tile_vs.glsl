@@ -1,19 +1,20 @@
 #version 330 core
 layout (location = 0) in vec2 aPos;          // base quad: (0,0),(16,0),(0,16),(16,16)
 layout (location = 1) in vec2 aUVUnit;       // base UV within a tile: (0,0),(1,0),(0,1),(1,1)
-layout (location = 2) in uvec2 iTileXY;      // instanced: tile grid coords (uint16)
-layout (location = 3) in uint  iTileIndex;   // instanced: tile index 1..190
+layout (location = 2) in ivec2 iTileXY;       // instanced: tile grid coords (int16)
+layout (location = 3) in uint  iTileIndex;   // instanced: tile index 1..255
+layout (location = 4) in uint  iTileSize;    // instanced: tile size multiplier
 
 uniform mat4 uMVP;                           // pixel->clip transform
-uniform vec2 uAtlasSize;                     // (304,160)
+uniform vec2 uAtlasSize;                     // (304,160+64)
 uniform vec2 uTilePx;                        // (16,16)
-uniform uvec2 uGridDim;                      // (19,10) tiles per row/col
+uniform uvec2 uGridDim;                      // (19,10+4) tiles per row/col
 
 out vec2 vUV;
 
 void main() {
     // compute world position in pixels
-    vec2 world = aPos + vec2(iTileXY) * uTilePx;
+    vec2 world = aPos * iTileSize + vec2(iTileXY) * uTilePx;
 
     // Compute tile origin in pixels from tileIndex
     uint col = iTileIndex % uGridDim.x;

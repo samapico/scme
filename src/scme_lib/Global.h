@@ -41,6 +41,8 @@ namespace SCME {
     constexpr int TILESET_EXTRA_COUNT_H = 4;
     constexpr int TILESET_EXTRA_H = TILESET_EXTRA_COUNT_H * TILE_H;
 
+    constexpr int TILESET_WITH_EXTRA_H = TILESET_H + TILESET_EXTRA_H;
+
     constexpr QSize TILESET_SIZE_WITH_EXTRA = TILESET_SIZE + QSize(0, TILESET_EXTRA_H);
 
     constexpr int MAP_W = 1024;

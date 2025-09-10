@@ -24,7 +24,7 @@
 
 ///////////////////////////////////////////////////////////////////////////
 
-//#define NO_FPS_LIMIT
+#define NO_FPS_LIMIT
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -389,7 +389,6 @@ void EditorWidget::wheelEvent(QWheelEvent *event)
     }
 
     float zoomMultiplier = mEditor->config().zoomFactorAtIndex(mZoomIndex);
-    qDebug() << "zoomIndex=" << mZoomIndex << "; zoom=" << zoomMultiplier << zoomFactorAsString(zoomMultiplier);
 
     ScreenCoords screenTarget(this, event);
 

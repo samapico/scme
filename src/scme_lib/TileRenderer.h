@@ -47,7 +47,34 @@ public:
 
 protected:
 
+    // Instance payload sent per visible tile
+#pragma pack(push, 1)
+    struct TileInstanceData
+    {
+        int16_t x;          // tile grid x (0..1023)
+        int16_t y;          // tile grid y (0..1023)
+        uint16_t tileIndex; // 1..255
+        uint16_t sizeMultiply; // size multiplier, for large special tiles
+    };
+
+    struct TileQuad
+    {
+        float x, y;
+        float u, v;
+    };
+
+#pragma pack(pop)
+
+
+
+    void setTileQuadVertexAttributes(GLuint& layoutIndex);
+
+    void setTileInstanceVertexAttributes(GLuint& layoutIndex);
+
     std::unique_ptr<QOpenGLTexture> mTexTileset;
+
+    std::unique_ptr<QOpenGLTexture> mTexAnimatedSprites;
+
     std::unique_ptr<QOpenGLTexture> mTexAnimFlag;
     std::unique_ptr<QOpenGLTexture> mTexAnimGoal;
     std::unique_ptr<QOpenGLTexture> mTexAnimAsteroid1;
@@ -62,10 +89,15 @@ protected:
     GLuint instanceVbo_ = 0;  // per-visible-tile data
     GLuint vao_ = 0;
 
+    GLuint borderVbo_ = 0;
+    GLuint borderVao_ = 0;
+
+    static constexpr int BORDER_TILE_COUNT = (2 * MAP_W + 2 * MAP_H + 4);
+
     // Avoid rebuilding the list of tile instances in two consecutive frames with the same bounds
-    std::vector<TileInstanceData> cachedInstances;
-    TileCoords cachedBoundsTopLeft;
-    TileCoords cachedBoundsBottomRight;
+    std::vector<TileInstanceData> mCachedInstances;
+    TileCoords mCachedBoundsTopLeft;
+    TileCoords mCachedBoundsBottomRight;
 };
 
 
