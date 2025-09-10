@@ -4,6 +4,7 @@
 #include "Global.h"
 
 #include <QtCore/QMetaType>
+#include <QtCore/QTypeInfo>
 
 
 
@@ -89,26 +90,6 @@ public:
         return *this;
     };
 
-
-    inline bool isTileset() const { return mId > 0 && mId <= 190; }
-
-    inline bool isVisible() const;
-
-    inline bool isVisibleOnRadar() const;
-
-    inline bool isSolid() const {
-        return mId > 0 && mId <= 161
-            || mId >= 192 && mId <= 215
-            || mId >= 221 && mId <= 240
-            || mId >= 243 && mId <= 251;
-    }
-
-    inline bool isObject() const;
-
-    inline bool isFlyOver() const { return mId >= SpecialTileFlyOver_0 && mId <= SpecialTileFlyOver_n; }
-
-    inline bool isFlyUnder() const { return mId >= SpecialTileFlyUnder_0 && mId <= SpecialTileFlyUnder_n; }
-
     const TileInfo& getInfo() const;
 
     static const TileInfo& getInfo(TileId id);
@@ -118,20 +99,6 @@ public:
 
 /// We must be able to send a 1024x1024 array of Tile to the GPU as a 1024x1024 array of uint8_t
 static_assert(sizeof(Tile) == sizeof(TileId));
-
-//////////////////////////////////////////////////////////////////////////
-
-inline bool Tile::isObject() const
-{
-    return
-        mId >= SpecialTileDoorA1 && mId <= SpecialTileDoorB4 ///< Animated doors
-        || mId == SpecialTileFlag ///< Animated flag
-        || mId == SpecialTileGoal ///< Animated goal
-        || mId >= SpecialTileSmallAsteroid1 && mId <= SpecialTileSmallAsteroid2 ///< Asteroids
-        || mId == SpecialTileStation
-        || mId == SpecialTileWormhole;
-}
-
 
 
 ///////////////////////////////////////////////////////////////////////////

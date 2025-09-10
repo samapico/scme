@@ -51,8 +51,8 @@ public:
     bool mIsFlyUnder = false;
     bool mIsVisible = false;
     bool mIsVisibleOnRadar = false;
-    bool mIsObject = false;
-    bool mIsLarge = false;
+
+    constexpr bool isLarge() { return mSize > 1; }
 
     int mSize = 1;
 
@@ -87,7 +87,41 @@ constexpr TileInfoArray initTileInfo()
 
     for (size_t i = 1; i < tileInfoArray.size(); i++)
     {
-        tileInfoArray[i].mIsSolid = true;
+        TileInfo* ti = tileInfoArray.data() + i;
+
+        ti->mIsSolid = (
+            i > 0 && i <= 161
+            || i >= 192 && i <= 215
+            || i >= 221 && i <= 240
+            || i >= 243 && i <= 251
+        );
+
+        ti->mIsTileset = i > 0 && i <= 190;
+
+        ti->mIsAnimated = (
+            i >= Tile::SpecialTileDoorA1 && i <= Tile::SpecialTileDoorB4 ///< Animated doors
+            || i == Tile::SpecialTileFlag ///< Animated flag
+            || i == Tile::SpecialTileGoal ///< Animated goal
+            || i >= Tile::SpecialTileSmallAsteroid1 && i <= Tile::SpecialTileSmallAsteroid2 ///< Asteroids
+            || i == Tile::SpecialTileStation
+            || i == Tile::SpecialTileWormhole
+        );
+
+        ti->mIsFlyOver = i >= Tile::SpecialTileFlyOver_0 && i <= Tile::SpecialTileFlyOver_n;
+        ti->mIsFlyUnder = i >= Tile::SpecialTileFlyUnder_0 && i <= Tile::SpecialTileFlyUnder_n;
+        ti->mIsVisible = true;
+        ti->mIsVisibleOnRadar = true;
+
+
+        if (i == Tile::SpecialTileLargeAsteroid)
+            ti->mSize = 2;
+        else if (i == Tile::SpecialTileStation)
+            ti->mSize = 6;
+        else if (i == Tile::SpecialTileWormhole)
+            ti->mSize = 5;
+        else
+            ti->mSize = 1;
+
 
         TileInfo::PixelColor c = TileInfo::PixelColorVoid;
 
@@ -102,7 +136,7 @@ constexpr TileInfoArray initTileInfo()
         else
             c = (i <= TILESET_COUNT) ? TileInfo::PixelColorNormal : TileInfo::PixelColorSpecial;
 
-        tileInfoArray[i].mPixelColor = c;
+        ti->mPixelColor = c;
     }
 
     return tileInfoArray;
