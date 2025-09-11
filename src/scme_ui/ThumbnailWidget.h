@@ -3,8 +3,7 @@
 
 #include "UiGlobal.h"
 
-#include <QtOpenGLWidgets/QOpenGLWidget>
-#include <QtOpenGL/QOpenGLFunctions_3_3_Core>
+#include <QtWidgets/QWidget>
 
 #include <QtCore/QPoint>
 #include <QtCore/QPointF>
@@ -27,7 +26,7 @@ class LevelData;
 
 //////////////////////////////////////////////////////////////////////////
 
-class ThumbnailWidget : public QOpenGLWidget
+class ThumbnailWidget : public QWidget
 {
     Q_OBJECT
 
@@ -51,18 +50,14 @@ signals:
     void doCenterView(const LevelCoords& center);
 
 protected:
-    void initializeGL();
-    void resizeGL(int width, int height);
-    void paintGL();
+    void resizeEvent(QResizeEvent* event) override;
 
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void wheelEvent(QWheelEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
-    void paintEvent(QPaintEvent *event);
-
-    void drawDebug(QPainter& painter);
+    void paintEvent(QPaintEvent *event) override;
 
     void drawLevelBounds(QPainter& painter);
 

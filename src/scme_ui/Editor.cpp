@@ -76,6 +76,14 @@ TilesetWidget* Editor::tilesetWidget() const
     return ui->tilesetWidget;
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+
+EditorConfig& Editor::config()
+{
+    return EditorConfig::sGlobalConfig;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 void Editor::onUiError(const QString& message)
@@ -93,7 +101,7 @@ void Editor::toggleGridPreset()
     gridPreset_s++;
     gridPreset_s %= EditorConfig::GridPresetCount;
 
-    mConfig.setGridPreset((EditorConfig::GridPreset)gridPreset_s);
+    config().setGridPreset((EditorConfig::GridPreset)gridPreset_s);
 
     if (centralWidget())
         centralWidget()->update();

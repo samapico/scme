@@ -36,13 +36,13 @@ signals:
 
 public:
 
+    static EditorConfig& config();
+
     Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 
     Editor(const QString& levelToOpen, QWidget* parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 
     virtual ~Editor();
-
-    inline const EditorConfig& config() const;
 
     inline std::shared_ptr<LevelData> level() const;
 
@@ -84,21 +84,11 @@ private:
 
     std::unique_ptr<Ui::EditorClass> ui;
 
-    EditorConfig mConfig;
-
     std::shared_ptr<LevelData> mLevel;
 
     QPointer<EditorWidget>    mEditorWidget;
     QPointer<ThumbnailWidget> mThumbnailWidget;
 };
-
-
-//////////////////////////////////////////////////////////////////////////
-
-const EditorConfig& Editor::config() const
-{
-    return mConfig;
-}
 
 //////////////////////////////////////////////////////////////////////////
 

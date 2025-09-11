@@ -9,6 +9,11 @@ using namespace ::SCME;
 
 //////////////////////////////////////////////////////////////////////////
 
+EditorConfig EditorConfig::sGlobalConfig;
+
+
+//////////////////////////////////////////////////////////////////////////
+
 EditorConfig::EditorConfig()
 {
     mDefaultPen.setColor(QColor(0, 0, 0, 0));
@@ -79,9 +84,25 @@ void EditorConfig::setDefaultConfig()
     mPixelsPerGridFadeIn = 9.0f;
     mPixelsPerGridFadeOut = 15.0f;
 
+    mPixelViewZoomFadeIn = 1.f / 12.f;
+    mPixelViewZoomFadeOut = 1.f / 16.f;
+
     mSmoothCameraTime = 350;
 
     mSmoothDragSpeed = 0.0; //Multiplier; 0 disables it
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+float EditorConfig::pixelViewOpacityAtZoom(float zoomFactor) const
+{
+    if (mPixelViewZoomFadeIn == mPixelViewZoomFadeOut)
+        return zoomFactor == mPixelViewZoomFadeIn ? 1.f : 0.f;
+
+    return 1.f - std::clamp(
+        (zoomFactor - mPixelViewZoomFadeOut) / (mPixelViewZoomFadeIn - mPixelViewZoomFadeOut),
+        0.f,
+        1.f);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -105,7 +126,7 @@ void EditorConfig::setGridPreset(GridPreset preset)
 
         float t = qMax(0.0f, 0.25f * ((float)(i-2))/(mGridSizes.count() - 1));
 
-        float a = 0.25f + 0.50f * ((float)i / (mGridSizes.count() - 1));
+        float a = mGridPresetAlphaNear + (mGridPresetAlphaFar - mGridPresetAlphaNear) * ((float)i / (mGridSizes.count() - 1));
 
         QColor c;
 
@@ -135,7 +156,11 @@ void EditorConfig::setGridPreset(GridPreset preset)
         }
 
         //shift hue and grey it out a bit
-        c.setHsv((c.hue() + (int)(60*((float)(i))/(mGridSizes.count() - 1)))%360, c.saturation()*.75, c.value()*.75, a*255);
+        c.setHsv(
+            (c.hue() + (int)(mGridPresetHueShift * ((float)(i)) / (mGridSizes.count() - 1))) % 360,
+            c.saturation() * mGridPresetSaturationFactor,
+            c.value() * mGridPresetValueFactor,
+            a * 255);
 
         mGridPens[i].setColor(c);
     }
