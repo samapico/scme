@@ -3,6 +3,7 @@
 
 #include "Global.h"
 
+#include <QtCore/QObject>
 #include <QtCore/QVector>
 #include <QtGui/QPen>
 
@@ -13,10 +14,17 @@ namespace SCME {
 
 ///////////////////////////////////////////////////////////////////////////
 
-class SCME_LIB_DLL EditorConfig
+class SCME_LIB_DLL EditorConfig : public QObject
 {
+    Q_OBJECT
+signals:
+
+    void configChanged(EditorConfig* config);
 
 public:
+
+    static EditorConfig sGlobalConfig;
+
     EditorConfig();
     ~EditorConfig();
 
@@ -60,9 +68,17 @@ public:
     /// @todo This should end up in the panning tool's config
     float smoothDragSpeed() const;
 
+    float pixelViewOpacityAtZoom(float zoomFactor) const;
+
 private:
 
     void addZoomLevels(float minZoom, float maxZoom, float mult);
+
+    float mGridPresetAlphaNear = .20f;
+    float mGridPresetAlphaFar = .40f;
+    float mGridPresetHueShift = 75.f;
+    float mGridPresetSaturationFactor = .9f;
+    float mGridPresetValueFactor = .9f;
 
     QVector<int> mGridSizes;
     QVector<QPen> mGridPens;
@@ -76,6 +92,9 @@ private:
     float mSmoothDragSpeed;
     float mPixelsPerGridFadeIn; //0% opacity if pixels per grid is <= this value
     float mPixelsPerGridFadeOut; //100% opacity if pixels per grid is >= this value
+
+    float mPixelViewZoomFadeIn; //0% pixel view when zoom is >= this value
+    float mPixelViewZoomFadeOut; //100% pixel view when zoom is <= this value
 };
 
 

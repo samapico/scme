@@ -14,11 +14,11 @@ using namespace ::SCME;
 //////////////////////////////////////////////////////////////////////////
 
 ThumbnailWidget::ThumbnailWidget(Editor* editor, QWidget *parent) :
-    QOpenGLWidget(parent),
+    QWidget(parent),
     mEditor(editor),
     mThumbnailArea(0, 0, 100, 100),
     mLevelBoundsPen(QColor(Qt::darkMagenta)),
-    mViewBoundsPen (QColor(255, 0, 0, 128))
+    mViewBoundsPen (QColor(255, 0, 0, 128), 2.f)
 {
     setMouseTracking(true);
 }
@@ -46,62 +46,11 @@ QSize ThumbnailWidget::sizeHint() const
 
 //////////////////////////////////////////////////////////////////////////
 
-void ThumbnailWidget::initializeGL()
+void ThumbnailWidget::resizeEvent(QResizeEvent* event)
 {
-    QOpenGLWidget::initializeGL();
+    int width = event->size().width();
+    int height = event->size().height();
 
-    glClearColor(0, 0, 0, 1);
-
-    /*
-    qglClearColor(QColor::fromCmykF(0.39, 0.39, 0.0, 0.0));
-
-    //logo = new QtLogo(this, 64);
-    //logo->setColor(qtGreen.dark());
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glShadeModel(GL_FLAT);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_MULTISAMPLE);
-    static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-    */
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void ThumbnailWidget::paintGL()
-{
-    QOpenGLWidget::paintGL();
-
-
-    QPainter painter(this);
-    painter.beginNativePainting();
-
-
-    drawLevelBounds(painter);
-
-    drawLevel(painter);
-
-    drawViewBounds(painter);
-
-#ifdef _DEBUG
-    drawDebug(painter);
-#endif
-
-    painter.endNativePainting();
-
-    //glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
-    //glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
-    //glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
-    //logo->draw();
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void ThumbnailWidget::resizeGL(int width, int height)
-{
     const int margin = 3;
 
     if (width < height)
@@ -131,34 +80,6 @@ void ThumbnailWidget::resizeGL(int width, int height)
 
     mThumbnailScale = QPointF((qreal)mThumbnailArea.width () / levelPixelSize.width(),
                               (qreal)mThumbnailArea.height() / levelPixelSize.height());
-
-    //QGLWidget::resizeGL(width, height);
-    /*
-    int side = qMin(width, height);
-    glViewport((width - side) / 2, (height - side) / 2, side, side);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-#ifdef QT_OPENGL_ES_1
-    glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-#else
-    glOrtho(0, width, height, 0, 4.0, 15.0);
-#endif
-    glMatrixMode(GL_MODELVIEW);
-
-    repaint();
-    */
-    //// Calculate aspect ratio
-    //qreal aspect = qreal(w) / qreal(h ? h : 1);
-    //
-    //// Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
-    //const qreal zNear = 3.0, zFar = 7.0, fov = 45.0;
-    //
-    //// Reset projection
-    //projection.setToIdentity();
-    //
-    //// Set perspective projection
-    //projection.perspective(fov, aspect, zNear, zFar);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -198,26 +119,13 @@ void ThumbnailWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void ThumbnailWidget::paintEvent(QPaintEvent *event)
 {
-    QOpenGLWidget::paintEvent(event);
-}
+    QPainter painter(this);
 
-//////////////////////////////////////////////////////////////////////////
+    drawLevelBounds(painter);
 
-void ThumbnailWidget::drawDebug(QPainter& painter)
-{
-    painter.save();
+    drawLevel(painter);
 
-    QString str;
-
-    //painter.setPen(QColor(Qt::green));
-    //str = QString("(%1,%2)x%3").arg(
-    //    QString::number(mTopLeft.x()),
-    //    QString::number(mTopLeft.y()),
-    //    QString::number(mZoomFactor, 'f', 3));
-    //
-    //painter.drawText(0, 10, str);
-
-    painter.restore();
+    drawViewBounds(painter);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -225,6 +133,8 @@ void ThumbnailWidget::drawDebug(QPainter& painter)
 void ThumbnailWidget::drawLevelBounds(QPainter& painter)
 {
     painter.save();
+
+    painter.fillRect(mThumbnailArea, Qt::black);
 
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setPen(mLevelBoundsPen);

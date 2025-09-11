@@ -152,6 +152,8 @@ void EditorWidget::paintGL()
     if (!pLevel)
         return;
 
+    const EditorConfig& cfg = mEditor->config();
+
     {
         QPainter painter(this);
         painter.beginNativePainting();
@@ -164,13 +166,7 @@ void EditorWidget::paintGL()
 
     LevelBounds renderBounds = viewBounds();
 
-    constexpr float pixelRenderFadeInZoomFactor = 1.f / 12.f;
-    constexpr float pixelRenderFadeOutZoomFactor = 1.f / 16.f;
-
-    float minimapRenderOpacity = 1.f - std::clamp(
-        (zoomFactor() - pixelRenderFadeOutZoomFactor) / (pixelRenderFadeInZoomFactor - pixelRenderFadeOutZoomFactor),
-        0.f,
-        1.f);
+    float minimapRenderOpacity = cfg.pixelViewOpacityAtZoom(zoomFactor());
 
     if (minimapRenderOpacity < 1.f)
     {
@@ -526,30 +522,28 @@ void EditorWidget::drawDebug(QPainter& painter, const LevelData* pLevel)
     QString str;
 
     painter.setPen(QColor(Qt::green));
-    str = QString("(%1,%2)x%3/%4 - %5FPS").arg(
-        QString::number(mCenter.x()),
-        QString::number(mCenter.y()),
-        QString::number(mZoomFactor, 'f', 6),
-        QString::number(mTargetZoomFactor, 'f', 6),
+    str = QString("[%1,%2] x%3 - %4FPS").arg(
+        QString::number(mCenter.x(), 'f', 2),
+        QString::number(mCenter.y(), 'f', 2),
+        zoomFactorAsString(mTargetZoomFactor),
         QString::number(mFrameCounter->lastFPS(), 'f', 1));
 
     painter.drawText(0, 10, str);
 
     str = QString("(%1,%2) - (%3,%4)").arg(
-        QString::number(mCursor.x(), 'f', 1),
-        QString::number(mCursor.y(), 'f', 1),
+        QString::number(mCursor.x(), 'f', 2),
+        QString::number(mCursor.y(), 'f', 2),
         QString::number(mCursor.tileX()),
         QString::number(mCursor.tileY()));
 
     painter.drawText(0, 30, str);
 
 
-    painter.drawText(0, 50, QString("%1; %2/%3; %4")
-        .arg(QString::number(mSmoothView->state()))
-        .arg(mSmoothView->currentTime())
-        .arg(mSmoothView->duration())
-        .arg(mSmoothViewStopPan)
-    );
+    //painter.drawText(0, 50, QString("%1; %2/%3; %4")
+    //    .arg(QString::number(mSmoothView->state()))
+    //    .arg(mSmoothView->currentTime())
+    //    .arg(mSmoothView->duration())
+    //    .arg(mSmoothViewStopPan));
 
     painter.restore();
 }
@@ -707,6 +701,13 @@ ScreenCoords EditorWidget::screenCenter() const
 void EditorWidget::setViewCenter(const LevelCoords& centerPixel)
 {
     mCenter = centerPixel;
+
+    if (zoomFactor() <= 1.f)
+    {
+        //Do not keep decimals when zoomed out for more consistent rendering
+        mCenter.setX(qRound(mCenter.x()));
+        mCenter.setY(qRound(mCenter.y()));
+    }
 
     if (mSmoothView->state() == QAbstractAnimation::State::Running)
     {

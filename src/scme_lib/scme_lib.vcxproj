@@ -31,7 +31,7 @@
   <ItemGroup>
     <ClInclude Include="Array2D.h" />
     <ClInclude Include="Coords.h" />
-    <ClInclude Include="EditorConfig.h" />
+    <QtMoc Include="EditorConfig.h" />
     <ClInclude Include="ExtraLevelData.h" />
     <ClInclude Include="Global.h" />
     <ClInclude Include="LevelData.h" />
