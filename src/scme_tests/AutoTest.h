@@ -6,7 +6,7 @@
 #include <QList>
 #include <QString>
 #include <QSharedPointer>
-#include <QtCore/QCoreApplication>
+#include <QtGui/QGuiApplication>
 
 namespace AutoTest
 {
@@ -75,7 +75,7 @@ namespace AutoTest
 #define TEST_MAIN \
  int main(int argc, char *argv[]) \
  { \
-  QCoreApplication app(argc, argv); \
+  QGuiApplication app(argc, argv); \
   return AutoTest::run(argc, argv); \
  }
 
