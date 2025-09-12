@@ -14,6 +14,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_ui", "src\scme_ui\scme_ui.vcxproj", "{54D6E390-D523-49A0-B584-086C9CAC2AE9}"
 	ProjectSection(ProjectDependencies) = postProject
 		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41} = {8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_tests", "src\scme_tests\scme_tests.vcxproj", "{CC24069C-77D2-494C-BAFB-DF8730902F15}"
@@ -21,6 +22,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scme_tests", "src\scme_test
 		{54D6E390-D523-49A0-B584-086C9CAC2AE9} = {54D6E390-D523-49A0-B584-086C9CAC2AE9}
 		{75B437C5-1881-4B59-94E5-CEB93F85C64B} = {75B437C5-1881-4B59-94E5-CEB93F85C64B}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QtAwesome", "src\QtAwesome\QtAwesome.vcxproj", "{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9FFB6603-CAAD-4FBB-BA47-8EF66C735E7B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,9 +51,17 @@ Global
 		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Debug|x64.Build.0 = Debug|x64
 		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Release|x64.ActiveCfg = Release|x64
 		{CC24069C-77D2-494C-BAFB-DF8730902F15}.Release|x64.Build.0 = Release|x64
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}.Debug|x64.ActiveCfg = Debug|x64
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}.Debug|x64.Build.0 = Debug|x64
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}.Release|x64.ActiveCfg = Release|x64
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CC24069C-77D2-494C-BAFB-DF8730902F15} = {9FFB6603-CAAD-4FBB-BA47-8EF66C735E7B}
+		{8E08EA8C-7149-3BD1-9E6F-A4F73DCDCC41} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AC5F8B04-411B-4AAA-9760-D9F8A7A7F17E}

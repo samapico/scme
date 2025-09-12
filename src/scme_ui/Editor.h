@@ -14,6 +14,10 @@
 
 ///////////////////////////////////////////////////////////////////////////
 
+namespace fa {
+    class QtAwesome;
+}
+
 namespace Ui {
     class EditorClass;
 }
@@ -40,6 +44,8 @@ signals:
 public:
 
     static EditorConfig& config();
+
+    static fa::QtAwesome* awesome();
 
     Editor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 

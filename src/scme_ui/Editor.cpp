@@ -4,6 +4,7 @@
 #include "EditorWidget.h"
 #include "ThumbnailWidget.h"
 #include "LambdaEventFilter.h"
+#include "QtAwesome.h"
 
 #include "LevelData.h"
 
@@ -19,6 +20,9 @@
 #include <QtCore/QDebug>
 
 ///////////////////////////////////////////////////////////////////////////
+
+static std::unique_ptr<fa::QtAwesome> sAwesome;
+
 
 using namespace ::SCME;
 
@@ -58,8 +62,8 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
     QAction* actionUndo = mUndoGroup.createUndoAction(this);
     QAction* actionRedo = mUndoGroup.createRedoAction(this);
 
-    actionUndo->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
-    actionRedo->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+    actionUndo->setIcon(awesome()->icon("rotate-left"));
+    actionRedo->setIcon(awesome()->icon("rotate-right"));
 
     actionUndo->setShortcut(QKeySequence::Undo);
     actionRedo->setShortcut(QKeySequence::Redo);
@@ -102,6 +106,20 @@ Editor::~Editor()
 TilesetWidget* Editor::tilesetWidget() const
 {
     return ui->tilesetWidget;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
+fa::QtAwesome* Editor::awesome()
+{
+    if (!sAwesome)
+    {
+        sAwesome = std::make_unique<fa::QtAwesome>();
+        sAwesome->initFontAwesome();
+    }
+
+    return sAwesome.get();
 }
 
 
