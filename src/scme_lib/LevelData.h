@@ -5,6 +5,8 @@
 
 #include "Global.h"
 
+#include <QtCore/QObject>
+
 #include "Array2D.h"
 #include "Tile.h"
 #include "LevelTiles.h"
@@ -24,11 +26,17 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
-class SCME_LIB_DLL LevelData
+class SCME_LIB_DLL LevelData : public QObject
 {
+    Q_OBJECT
+
+signals:
+
+    void tilesChanged(const LevelData*);
+
 public:
 
-    LevelData();
+    LevelData(QObject* parent = nullptr);
     virtual ~LevelData();
 
     bool loadFromFile(const QString& filepath);

@@ -20,6 +20,8 @@
 
 #include "LevelData.h"
 
+#include "commands/CmdSetTiles.h"
+
 #include <gl/GL.h>
 
 ///////////////////////////////////////////////////////////////////////////
@@ -41,7 +43,8 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     mTargetZoomFactor(1),
     mDragging(false),
     mDragStart(this, 0, 0),
-    mSmoothView(new QPropertyAnimation(this, "viewBoundsAndZoom", this))
+    mSmoothView(new QPropertyAnimation(this, "viewBoundsAndZoom", this)),
+    mUndoStack(new QUndoStack(editor->undoGroup()))
 {
     this->setMouseTracking(true);
     mFrameCounter = new FrameCounter(this);
@@ -274,12 +277,15 @@ void EditorWidget::mousePressEvent(QMouseEvent *event)
     }
     else
     {
+        //Start a new click+drag; all the CmdSetTiles objects with the same id will be merged together
+        mCurrentSetTilesId++;
+
         /// @todo Start drag with specific mouse button(s)
         TileId tileId = mEditor->tilesetWidget()->selection(event->button());
 
-        QPoint tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
-        setLevelTile(this, pLevel, tile, tileId, true);
+        TileCoords tile = pLevel->boundPixelToLevel(clickScreenCoords.toLevel()).tile();
 
+        undoStack()->push(new CmdSetTiles(pLevel, CmdSetTiles::TileChange(tile, tileId), mCurrentSetTilesId));
     }
 }
 
@@ -326,7 +332,10 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
         return;
 
     auto previousCursor = mCursor;
+
     mCursor = pLevel->boundPixelToLevel(ScreenCoords(this, event).toLevel());
+
+    emit cursorMoved(mCursor);
 
     if (mDragging)
     {
@@ -345,13 +354,16 @@ void EditorWidget::mouseMoveEvent(QMouseEvent *event)
                 QPoint tileFrom = pLevel->boundPixelToLevel(previousCursor).tile();
                 QPoint tileTo = pLevel->boundPixelToLevel(mCursor).tile();
 
-                doOnLine(tileFrom.x(), tileFrom.y(), tileTo.x(), tileTo.y(), [this, pLevel, tileId](int x, int y)
+                QList<CmdSetTiles::TileChange> changes;
+
+                doOnLine(tileFrom.x(), tileFrom.y(), tileTo.x(), tileTo.y(), [&changes, tileId](int x, int y)
                     {
-                        setLevelTile(this, pLevel, QPoint(x, y), tileId, false);
+                        changes.append(CmdSetTiles::TileChange({ x, y }, tileId));
                     }
                 );
 
-                levelTilesChanged(pLevel.get());
+                undoStack()->push(new CmdSetTiles(pLevel, changes, mCurrentSetTilesId));
+                //levelTilesChanged(pLevel.get());
 
                 //Useless to draw both left AND right tiles at the same time
                 break;
@@ -552,6 +564,8 @@ void EditorWidget::drawDebug(QPainter& painter, const LevelData* pLevel)
 
 void EditorWidget::onLevelChanged()
 {
+    undoStack()->clear();
+
     onTilesetChanged();
 }
 
@@ -622,6 +636,8 @@ void EditorWidget::zoomAt(const LevelCoords& center, float newZoomFactor)
     mTargetZoomFactor = newZoomFactor;
 
     setViewTargetAndZoomSmooth(targetCenter, boundScreenPixelToLevel(pLevel.get(), screenCenter()), newZoomFactor);
+
+    emit zoomFactorTargetChanged(mTargetZoomFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -646,6 +662,8 @@ void EditorWidget::zoomTowards(const LevelCoords& target, const ScreenCoords& sc
     mTargetZoomFactor = newZoomFactor;
 
     setViewTargetAndZoomSmooth(targetCenter, screenTarget, newZoomFactor);
+
+    emit zoomFactorTargetChanged(mTargetZoomFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -852,5 +870,16 @@ void EditorWidget::setDefaultZoom()
         update();
         emit viewMoved(viewBounds());
     }
+
+    emit zoomFactorTargetChanged(mTargetZoomFactor);
 }
 
+///////////////////////////////////////////////////////////////////////////
+
+QUndoStack* EditorWidget::undoStack() const
+{
+    Q_ASSERT(mUndoStack);
+    return mUndoStack;
+}
+
+///////////////////////////////////////////////////////////////////////////

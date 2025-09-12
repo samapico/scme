@@ -67,6 +67,12 @@
     <ClCompile Include="LevelTiles.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="commands\CmdBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="commands\CmdSetTiles.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Array2D.h">
@@ -79,9 +85,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Global.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LevelData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LevelObject.h">
@@ -108,9 +111,18 @@
     <ClInclude Include="LevelTiles.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="commands\CmdBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="commands\CmdSetTiles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="EditorConfig.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="LevelData.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

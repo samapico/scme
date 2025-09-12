@@ -15,6 +15,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Array2D.cpp" />
+    <ClCompile Include="commands\CmdBase.cpp" />
+    <ClCompile Include="commands\CmdSetTiles.cpp" />
     <ClCompile Include="Coords.cpp" />
     <ClCompile Include="EditorConfig.cpp" />
     <ClCompile Include="ExtraLevelData.cpp" />
@@ -30,11 +32,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Array2D.h" />
+    <ClInclude Include="commands\CmdBase.h" />
+    <ClInclude Include="commands\CmdSetTiles.h" />
     <ClInclude Include="Coords.h" />
     <QtMoc Include="EditorConfig.h" />
     <ClInclude Include="ExtraLevelData.h" />
     <ClInclude Include="Global.h" />
-    <ClInclude Include="LevelData.h" />
+    <QtMoc Include="LevelData.h" />
     <ClInclude Include="LevelObject.h" />
     <ClInclude Include="LevelTiles.h" />
     <ClInclude Include="MinimapRenderer.h" />

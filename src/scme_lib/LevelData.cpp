@@ -22,7 +22,8 @@ static void Fill(Array2D<Tile>& map, const QRect& area, TileId value)
 
 //////////////////////////////////////////////////////////////////////////
 
-LevelData::LevelData()
+LevelData::LevelData(QObject* parent) :
+    QObject(parent)
 {
     mBounds = LevelBounds(LevelCoords(0, 0), QSizeF(size().width() * TILE_W, size().height() * TILE_H));
 

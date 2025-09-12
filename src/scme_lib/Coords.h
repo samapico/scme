@@ -60,7 +60,7 @@ public:
 
     inline float tileYf() const { return QPointF::y() / TILE_H; }
 
-    inline QPoint tile() const { return QPoint(tileX(), tileY()); }
+    inline TileCoords tile() const { return TileCoords(tileX(), tileY()); }
 
     inline QPointF tilef() const { return QPointF(tileXf(), tileYf()); }
 

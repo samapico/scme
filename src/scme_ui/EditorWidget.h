@@ -6,6 +6,7 @@
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QtOpenGL/QOpenGLFunctions_3_3_Core>
 
+#include <QtGui/QUndoStack>
 #include <QtCore/QParallelAnimationGroup>
 #include <QtCore/QPoint>
 #include <QtCore/QPointF>
@@ -74,6 +75,8 @@ public:
 
     ScreenCoords screenCenter() const;
 
+    QUndoStack* undoStack() const;
+
     static ScreenCoords boundScreenPixelToLevel(const LevelData* pLevel, const ScreenCoords& screenPixel);
 
 public slots:
@@ -100,11 +103,15 @@ signals:
 
     void viewMoved(const LevelBounds& viewBounds);
 
+    void cursorMoved(const LevelCoords& coords);
+
     void levelTilesetChanged(const LevelData* level);
 
     void levelTilesChanged(const LevelData* level);
 
     void levelTilesChangedArea(const LevelData* level, const LevelBounds& bounds);
+
+    void zoomFactorTargetChanged(float zoom);
 
 protected:
     void initializeGL() override;
@@ -164,9 +171,10 @@ private:
     std::unique_ptr<TileRenderer> mTileRenderer;
     std::unique_ptr<MinimapRenderer> mMinimapRenderer;
 
-    LevelCoords mCursor;
+    QPointer<QUndoStack> mUndoStack;
+    int mCurrentSetTilesId = 1;
 
-    TileId mCurrentTileId = 1;
+    LevelCoords mCursor;
 };
 
 

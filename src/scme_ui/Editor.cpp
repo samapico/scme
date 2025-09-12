@@ -11,6 +11,7 @@
 
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QStyle>
 #include <QtGui/QCursor>
 #include <QtGui/QMouseEvent>
 
@@ -30,9 +31,17 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
 {
     ui->setupUi(this);
 
+    mStatusBarCursor = new QLabel(this);
+    mStatusBarZoom = new QLabel(this);
+    mStatusBarDebug = new QLabel(this);
+
+    ui->statusBar->addPermanentWidget(mStatusBarCursor, 1);
+    ui->statusBar->addPermanentWidget(mStatusBarZoom, 1);
+    ui->statusBar->addPermanentWidget(mStatusBarDebug, 8);
+
     connect(this, &Editor::uiError, this, &Editor::onUiError);
 
-    setWindowTitle(tr("SCME v%1").arg(applicationVersionString()));
+    updateWindowTitle();
 
     connect(ui->changeGridPreset, &QPushButton::clicked, this, &Editor::toggleGridPreset);
 
@@ -41,6 +50,25 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
     connect(ui->actionSave   , &QAction::triggered, this, &Editor::saveLevel);
     connect(ui->actionSave_As, &QAction::triggered, this, qOverload<>(&Editor::saveLevelAs));
     connect(ui->actionClose  , &QAction::triggered, this, &Editor::closeLevel);
+
+    connect(&mUndoGroup, &QUndoGroup::activeStackChanged, this, &Editor::onUndoStackChanged);
+    connect(&mUndoGroup, &QUndoGroup::indexChanged, this, &Editor::onUndoStackChanged);
+    connect(&mUndoGroup, &QUndoGroup::cleanChanged, this, &Editor::updateWindowTitle);
+
+    QAction* actionUndo = mUndoGroup.createUndoAction(this);
+    QAction* actionRedo = mUndoGroup.createRedoAction(this);
+
+    actionUndo->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
+    actionRedo->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+
+    actionUndo->setShortcut(QKeySequence::Undo);
+    actionRedo->setShortcut(QKeySequence::Redo);
+
+    ui->menu_Edit->addAction(actionUndo);
+    ui->menu_Edit->addAction(actionRedo);
+
+    ui->mainToolBar->addAction(actionUndo);
+    ui->mainToolBar->addAction(actionRedo);
 
     initEditorWidget();
     initRadar();
@@ -94,6 +122,60 @@ void Editor::onUiError(const QString& message)
 
 //////////////////////////////////////////////////////////////////////////
 
+void Editor::onUndoStackChanged()
+{
+    auto stack = mUndoGroup.activeStack();
+
+    if (!stack)
+    {
+        mStatusBarDebug->setText("<null undo>");
+        return;
+    }
+
+    mStatusBarDebug->setText(QString("%1/%2 actions: %3").arg(stack->index()).arg(stack->count()).arg(stack->undoText()));
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::updateStatusCursor(const LevelCoords& coords)
+{
+    TileCoords xy = coords.tile();
+
+    auto pLevel = level();
+    if (pLevel)
+        xy = pLevel->boundTileToLevel(xy);
+
+    mStatusBarCursor->setText("(" + QString::number(xy.x()) + "," + QString::number(xy.y()) + ")");
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::updateStatusZoom(float zoom)
+{
+    mStatusBarZoom->setText(zoomFactorAsString(zoom));
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor::updateWindowTitle()
+{
+    QString strTitle = tr("SCME v%1").arg(applicationVersionString());
+
+    if (!mCurrentLevelFile.isEmpty())
+    {
+        strTitle.append(" - ");
+
+        if (!mUndoGroup.isClean())
+            strTitle.append("*");
+
+        strTitle.append(mCurrentLevelFile);
+    }
+
+    setWindowTitle(strTitle);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void Editor::toggleGridPreset()
 {
     static int gridPreset_s = EditorConfig::Grey;
@@ -116,7 +198,13 @@ void Editor::initEditorWidget()
         mEditorWidget = new EditorWidget(this);
         setCentralWidget(mEditorWidget);
 
+        mUndoGroup.setActiveStack(mEditorWidget->undoStack());
+
         connect(mEditorWidget, &EditorWidget::levelTilesetChanged, this, &Editor::initTileset);
+
+        connect(mEditorWidget, &EditorWidget::cursorMoved, this, &Editor::updateStatusCursor);
+
+        connect(mEditorWidget, &EditorWidget::zoomFactorTargetChanged, this, &Editor::updateStatusZoom);
     }
 }
 
@@ -132,6 +220,8 @@ void Editor::initRadar()
         connect(mThumbnailWidget, &ThumbnailWidget::doCenterView, mEditorWidget, &EditorWidget::setViewCenterSmooth, Qt::QueuedConnection);
         connect(mEditorWidget, &EditorWidget::viewMoved, mThumbnailWidget, &ThumbnailWidget::redrawViewBounds, Qt::QueuedConnection);
         connect(mEditorWidget, &EditorWidget::levelTilesChanged, mThumbnailWidget, &ThumbnailWidget::redrawLevel, Qt::QueuedConnection);
+
+        connect(mThumbnailWidget, &ThumbnailWidget::cursorMoved, this, &Editor::updateStatusCursor);
 
         ui->dockRadar->setWidget(mThumbnailWidget);
     }
@@ -155,6 +245,8 @@ void Editor::newLevel()
         Q_ASSERT(!mLevel);
         mLevel = std::make_shared<LevelData>();
 
+        mCurrentLevelFile = tr("<Untitled level>");
+
         onLevelLoaded();
 
         qApp->restoreOverrideCursor();
@@ -173,15 +265,18 @@ bool Editor::openLevel(const QString& filename)
 
     qApp->setOverrideCursor(Qt::WaitCursor);
 
-    Q_ASSERT(!mLevel);
-    mLevel = std::make_shared<LevelData>();
-
-    bool bLoaded = mLevel->loadFromFile(filename);
+    std::shared_ptr<LevelData> loadedLevel = std::make_shared<LevelData>();
+    bool bLoaded = loadedLevel->loadFromFile(filename);
 
     qApp->restoreOverrideCursor();
 
     if (bLoaded)
     {
+        Q_ASSERT(!mLevel);
+        mLevel = loadedLevel;
+
+        mCurrentLevelFile = filename;
+
         onLevelLoaded();
     }
     else
@@ -217,6 +312,8 @@ bool Editor::saveLevel()
 
     /// ...
 
+    mUndoGroup.activeStack()->setClean();
+
     qApp->restoreOverrideCursor();
 
     return false;
@@ -229,6 +326,8 @@ bool Editor::saveLevelAs(const QString& filename)
     qApp->setOverrideCursor(Qt::WaitCursor);
 
     /// ...
+
+    mUndoGroup.activeStack()->setClean();
 
     qApp->restoreOverrideCursor();
 
@@ -267,6 +366,7 @@ bool Editor::closeLevel()
         mLevel = nullptr;
     }
 
+    mCurrentLevelFile = QString();
     onLevelLoaded();
 
     return !cancel;
@@ -278,6 +378,12 @@ void Editor::onLevelLoaded()
 {
     qApp->setOverrideCursor(Qt::WaitCursor);
 
+    updateWindowTitle();
+
+    for (const auto& c : mLevelConnections)
+        QObject::disconnect(c);
+    mLevelConnections.clear();
+
     if (mEditorWidget)
     {
         mEditorWidget->onLevelChanged();
@@ -286,11 +392,39 @@ void Editor::onLevelLoaded()
         {
             mEditorWidget->setDefaultZoom();
             mEditorWidget->setViewCenter(mLevel->bounds().center());
+
+            mLevelConnections = {
+                connect(mLevel.get(), &LevelData::tilesChanged, mEditorWidget, &EditorWidget::levelTilesChanged),
+            };
         }
         else
         {
             mEditorWidget->update();
         }
     }
+
     qApp->restoreOverrideCursor();
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+QUndoStack* Editor::activeUndoStack() const
+{
+    return mUndoGroup.activeStack();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+const QUndoGroup* Editor::undoGroup() const
+{
+    return &mUndoGroup;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QUndoGroup* Editor::undoGroup()
+{
+    return &mUndoGroup;
+}
+
+//////////////////////////////////////////////////////////////////////////

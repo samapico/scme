@@ -4,7 +4,10 @@
 #include "UiGlobal.h"
 
 #include <QtCore/QPointer>
+
+#include <QtGui/QUndoGroup>
 #include <QtWidgets/QMainWindow>
+#include <QtWidgets/QLabel>
 
 #include "EditorConfig.h"
 #include "Coords.h"
@@ -48,6 +51,12 @@ public:
 
     TilesetWidget* tilesetWidget() const;
 
+    QUndoStack* activeUndoStack() const;
+
+    const QUndoGroup* undoGroup() const;
+
+    QUndoGroup* undoGroup();
+
 public slots:
 
     /// @returns True if the level is closed (or no level is currently loaded),
@@ -74,6 +83,14 @@ private slots:
 
     void onUiError(const QString& message);
 
+    void onUndoStackChanged();
+
+    void updateStatusCursor(const LevelCoords& coords);
+
+    void updateStatusZoom(float zoom);
+
+    void updateWindowTitle();
+
 private:
 
     void initEditorWidget();
@@ -88,6 +105,17 @@ private:
 
     QPointer<EditorWidget>    mEditorWidget;
     QPointer<ThumbnailWidget> mThumbnailWidget;
+
+    QPointer<QLabel> mStatusBarCursor;
+    QPointer<QLabel> mStatusBarZoom;
+    QPointer<QLabel> mStatusBarDebug;
+
+    /// List of QUndoStacks, one for each open document
+    QUndoGroup mUndoGroup;
+
+    QString mCurrentLevelFile;
+
+    QList<QMetaObject::Connection> mLevelConnections;
 };
 
 //////////////////////////////////////////////////////////////////////////

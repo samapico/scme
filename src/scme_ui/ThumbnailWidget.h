@@ -49,6 +49,8 @@ signals:
 
     void doCenterView(const LevelCoords& center);
 
+    void cursorMoved(const LevelCoords& coords);
+
 protected:
     void resizeEvent(QResizeEvent* event) override;
 

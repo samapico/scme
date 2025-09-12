@@ -97,10 +97,14 @@ void ThumbnailWidget::mousePressEvent(QMouseEvent *event)
 
 void ThumbnailWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    LevelCoords coords = screenToLevelPixel(event->position());
+
     if (event->buttons() & (Qt::LeftButton | Qt::MiddleButton))
     {
-        emit doCenterView(screenToLevelPixel(event->position()));
+        emit doCenterView(coords);
     }
+
+    emit cursorMoved(coords);
 }
 
 //////////////////////////////////////////////////////////////////////////
