@@ -12,6 +12,8 @@
         <file>graphics/wall.bmp</file>
         <file>shaders/tile_fs.glsl</file>
         <file>shaders/tile_vs.glsl</file>
+        <file>shaders/grid_fs.glsl</file>
+        <file>shaders/grid_vs.glsl</file>
         <file>ui/scme_icon_256.png</file>
         <file>ui/tileset_special.bmp</file>
     </qresource>

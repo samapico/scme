@@ -49,6 +49,13 @@ namespace SCME {
     constexpr int MAP_H = 1024;
     constexpr QSize MAP_SIZE(MAP_W, MAP_H);
 
+    /// In level world coordinates: Z = -1.0: bottom,  Z = +1.0: top
+    /// Screen coordinates are inverted;
+    /// All these constants are in world coordinates, the rendering has to convert them if needed
+    constexpr float ZCOORD_GRID_OVERTILES = 0.1f;
+    constexpr float ZCOORD_MAPTILES = 0.0f;
+    constexpr float ZCOORD_GRID_UNDERTILES = -0.1f;
+    constexpr float ZCOORD_MAPBORDER = -0.5f;
 
     enum Layer
     {
@@ -104,12 +111,17 @@ namespace SCME {
 
     static_assert(sizeof(RGBA_t) == sizeof(uint32_t));
 
+    static constexpr QVector4D colorToVec4(const QColor& c)
+    {
+        return QVector4D(c.redF(), c.greenF(), c.blueF(), c.alphaF());
+    }
 
-    static QString zoomFactorAsString(float zoom)
+
+    static QString zoomFactorAsString(float zoom, int decimals = 3)
     {
         if (zoom >= 1.f)
-            return QString("%1:1").arg(zoom);
-        return QString("1:%1").arg(1.f / zoom);
+            return QString("%1:1").arg(QString::number(zoom, 'f', decimals));
+        return QString("1:%1").arg(QString::number(1.f / zoom, 'f', decimals));
     }
 
     /// Converts an integer to an hexadecimal string, padded with 0's to correspond to the size of the datatype

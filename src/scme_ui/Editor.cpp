@@ -43,6 +43,20 @@ Editor::Editor(const QString& levelToOpen, QWidget *parent, Qt::WindowFlags flag
     ui->statusBar->addPermanentWidget(mStatusBarZoom, 1);
     ui->statusBar->addPermanentWidget(mStatusBarDebug, 8);
 
+    // Connect settings checkboxes
+    ui->useSoftwareGrid->setChecked(EditorConfig::getConfig().mGridSoftwareRendering);
+    connect(ui->useSoftwareGrid, &QCheckBox::toggled, &EditorConfig::getConfig(), &EditorConfig::setGridSoftwareRendering);
+
+    ui->drawGridOverTiles->setChecked(EditorConfig::getConfig().mGridDrawOverTiles);
+    connect(ui->drawGridOverTiles, &QCheckBox::toggled, &EditorConfig::getConfig(), &EditorConfig::setGridDrawOverTiles);
+
+    ui->renderAllTiles->setChecked(EditorConfig::getConfig().mRenderAllTiles);
+    connect(ui->renderAllTiles, &QCheckBox::toggled, &EditorConfig::getConfig(), &EditorConfig::setRenderAllTiles);
+
+    ui->renderTileBorder->setChecked(EditorConfig::getConfig().mRenderBorderTiles);
+    connect(ui->renderTileBorder, &QCheckBox::toggled, &EditorConfig::getConfig(), &EditorConfig::setRenderBorderTiles);
+
+
     connect(this, &Editor::uiError, this, &Editor::onUiError);
 
     updateWindowTitle();
@@ -127,7 +141,7 @@ fa::QtAwesome* Editor::awesome()
 
 EditorConfig& Editor::config()
 {
-    return EditorConfig::sGlobalConfig;
+    return EditorConfig::getConfig();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -142,15 +156,6 @@ void Editor::onUiError(const QString& message)
 
 void Editor::onUndoStackChanged()
 {
-    auto stack = mUndoGroup.activeStack();
-
-    if (!stack)
-    {
-        mStatusBarDebug->setText("<null undo>");
-        return;
-    }
-
-    mStatusBarDebug->setText(QString("%1/%2 actions: %3").arg(stack->index()).arg(stack->count()).arg(stack->undoText()));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -170,7 +175,7 @@ void Editor::updateStatusCursor(const LevelCoords& coords)
 
 void Editor::updateStatusZoom(float zoom)
 {
-    mStatusBarZoom->setText(zoomFactorAsString(zoom));
+    mStatusBarZoom->setText(zoomFactorAsString(zoom, 0));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -223,6 +228,13 @@ void Editor::initEditorWidget()
         connect(mEditorWidget, &EditorWidget::cursorMoved, this, &Editor::updateStatusCursor);
 
         connect(mEditorWidget, &EditorWidget::zoomFactorTargetChanged, this, &Editor::updateStatusZoom);
+
+        connect(mEditorWidget, &EditorWidget::framesCounted, this, [this](double fps)
+            {
+                if (mStatusBarDebug)
+                    mStatusBarDebug->setText(QString::number(fps, 'f', 0) + " FPS");
+            }
+        );
     }
 }
 

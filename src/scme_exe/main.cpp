@@ -5,6 +5,9 @@
 #include <QtCore/QSysInfo>
 #include <QtWidgets/QApplication>
 
+#include <QSurfaceFormat>
+
+
 ///////////////////////////////////////////////////////////////////////////
 
 using namespace ::SCME;
@@ -45,6 +48,16 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+
+
+    // Request core 3.3 for #version 330
+    QSurfaceFormat fmt;
+    fmt.setRenderableType(QSurfaceFormat::OpenGL);
+    fmt.setVersion(3, 3);
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setDepthBufferSize(0);
+    QSurfaceFormat::setDefaultFormat(fmt);
 
     qDebug().noquote() << "Starting" << a.applicationName() << a.applicationVersion() << "...";
     qDebug().noquote() << QSysInfo::prettyProductName() << QSysInfo::currentCpuArchitecture();

@@ -1,14 +1,14 @@
-#ifndef INC_Renderer_H
-#define INC_Renderer_H
+#ifndef INC_GridRenderer_H
+#define INC_GridRenderer_H
 
 //////////////////////////////////////////////////////////////////////////
 
 #include "Global.h"
-
 #include "Coords.h"
 
 
-#include <QtOpenGL/QOpenGLFunctions_3_3_Core>
+#include "Renderer.h"
+#include <QtOpenGL/QOpenGLShaderProgram>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -17,20 +17,28 @@ namespace SCME {
 
 //////////////////////////////////////////////////////////////////////////
 
+class Tileset;
 class LevelBounds;
 class LevelData;
 
 
 //////////////////////////////////////////////////////////////////////////
 
-class SCME_LIB_DLL Renderer : protected QOpenGLFunctions_3_3_Core
+class SCME_LIB_DLL GridRenderer : public Renderer
 {
 public:
-    Renderer() = default;
-    virtual ~Renderer() = default;
+    GridRenderer() = default;
+    virtual ~GridRenderer();
 
-    virtual void init();
+    void init();
 
+    void render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor);
+
+protected:
+
+    QOpenGLShaderProgram mProgram;
+
+    GLuint mVao = 0; //A dummy VAO is needed
 };
 
 
@@ -40,4 +48,4 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // INC_Renderer_H
+#endif // INC_GridRenderer_H

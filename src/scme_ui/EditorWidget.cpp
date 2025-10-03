@@ -17,6 +17,7 @@
 #include "FrameCounter.h"
 #include "TileRenderer.h"
 #include "MinimapRenderer.h"
+#include "GridRenderer.h"
 
 #include "LevelData.h"
 
@@ -49,14 +50,12 @@ EditorWidget::EditorWidget(Editor* editor, QWidget *parent) :
     this->setMouseTracking(true);
     mFrameCounter = new FrameCounter(this);
 
-    connect(mFrameCounter, &FrameCounter::framesCounted, this, [this](double fps)
-        {
-            //Force redraw
-            update();
-        });
+    connect(mFrameCounter, &FrameCounter::framesCounted, this, &EditorWidget::framesCounted);
 
     connect(this, &EditorWidget::levelTilesChanged, this, &EditorWidget::onTilesChanged);
     connect(this, &EditorWidget::levelTilesChangedArea, this, &EditorWidget::onTilesChangedArea);
+
+    connect(&EditorConfig::getConfig(), &EditorConfig::configChanged, this, qOverload<>(&QWidget::update));
 
 #ifdef NO_FPS_LIMIT
     QTimer* timerMaxFps = new QTimer(this);
@@ -142,6 +141,9 @@ void EditorWidget::initializeGL()
     mMinimapRenderer = std::make_unique<MinimapRenderer>();
     mMinimapRenderer->init();
 
+    mGridRenderer = std::make_unique<GridRenderer>();
+    mGridRenderer->init();
+
     mFrameCounter->start();
 }
 
@@ -157,6 +159,20 @@ void EditorWidget::paintGL()
 
     const EditorConfig& cfg = mEditor->config();
 
+    // Do we want to draw tiles, or pixel view, or a mix of both?
+    // 0.f: Tiles only;   1.f: Pixel view only
+    float minimapRenderOpacity = cfg.pixelViewOpacityAtZoom(zoomFactor());
+
+    LevelBounds renderBounds = viewBounds();
+
+    if (cfg.mGridSoftwareRendering && cfg.mRenderBorderTiles && minimapRenderOpacity < 1.f)
+    {
+        //If using software grid, draw the border tiles separately so the grid is always over them
+        //Hardware rendering can draw everything at once with proper Z-ordering
+        mTileRenderer->render(pLevel.get(), renderBounds, zoomFactor(), false, true);
+    }
+
+    if (cfg.mGridSoftwareRendering && !cfg.mGridDrawOverTiles)
     {
         QPainter painter(this);
         painter.beginNativePainting();
@@ -167,18 +183,16 @@ void EditorWidget::paintGL()
         painter.endNativePainting();
     }
 
-    LevelBounds renderBounds = viewBounds();
-
-    float minimapRenderOpacity = cfg.pixelViewOpacityAtZoom(zoomFactor());
-
     if (minimapRenderOpacity < 1.f)
     {
-        mTileRenderer->render(pLevel.get(), renderBounds, zoomFactor());
+        // Draw tiles
+        mTileRenderer->render(pLevel.get(), renderBounds, zoomFactor(), true, !cfg.mGridSoftwareRendering && cfg.mRenderBorderTiles);
     }
 
 
     if (minimapRenderOpacity > 0.f)
     {
+        // Draw pixel view
         QPainter painter(this);
         painter.setOpacity(minimapRenderOpacity);
 
@@ -191,6 +205,27 @@ void EditorWidget::paintGL()
             QRectF(screenTopLeft, screenBottomRight),
             QRectF(screenTopLeft.toLevel().tilef(), screenBottomRight.toLevel().tilef()),
             zoomFactor());
+    }
+
+
+    // Draw grid
+    if (cfg.mGridSoftwareRendering)
+    {
+        if (cfg.mGridDrawOverTiles)
+        {
+            QPainter painter(this);
+            painter.beginNativePainting();
+
+            //Draw on top of render
+            drawGrid(painter, pLevel.get());
+
+            painter.endNativePainting();
+        }
+    }
+    else
+    {
+        // hardware render uses Z coordinate to draw over or under
+        mGridRenderer->render(pLevel.get(), renderBounds, zoomFactor());
     }
 
     {
@@ -492,18 +527,25 @@ void EditorWidget::drawGrid(QPainter& painter, const LevelData* pLevel)
 
     LevelCoords tile = LevelCoords::fromTile(firstTilex, firstTiley);
 
+    //First tile for some reason is drawn one pixel too far
+    if (firstTilex == 0)
+        screenBounds.setLeft(screenBounds.left() + 1.);
+
+    if (firstTiley == 0)
+        screenBounds.setTop(screenBounds.top() + 1.);
+
     //draw horizontal grid lines
     for (int tiley = firstTiley; tiley <= lastTiley; tiley++)
     {
         tile.setY(LevelCoords::tileToPixel(tiley, TILE_H));
 
-        int screeny = ScreenCoords(this, tile).y();
-
         QPen pen = mEditor->config().getGridPen(tiley, pixelsPerTileY);
         if (pen.color().alpha() > 0)
         {
+            qreal screeny = ScreenCoords(this, tile).y() + pen.widthF() / 2.;
+
             painter.setPen(pen);
-            painter.drawLine(screenBounds.left(), screeny, screenBounds.right(), screeny);
+            painter.drawLine(QPointF(screenBounds.left(), screeny), QPointF(screenBounds.right(), screeny));
         }
     }
 
@@ -512,13 +554,13 @@ void EditorWidget::drawGrid(QPainter& painter, const LevelData* pLevel)
     {
         tile.setX(LevelCoords::tileToPixel(tilex, TILE_W));
 
-        int screenx = ScreenCoords(this, tile).x();
-
         QPen pen = mEditor->config().getGridPen(tilex, pixelsPerTileX);
         if (pen.color().alpha() > 0)
         {
+            qreal screenx = ScreenCoords(this, tile).x() + pen.widthF() / 2.;
+
             painter.setPen(pen);
-            painter.drawLine(screenx, screenBounds.top(), screenx, screenBounds.bottom());
+            painter.drawLine(QPointF(screenx, screenBounds.top()), QPointF(screenx, screenBounds.bottom()));
         }
     }
 
@@ -535,9 +577,9 @@ void EditorWidget::drawDebug(QPainter& painter, const LevelData* pLevel)
 
     painter.setPen(QColor(Qt::green));
     str = QString("[%1,%2] x%3 - %4FPS").arg(
-        QString::number(mCenter.x(), 'f', 2),
-        QString::number(mCenter.y(), 'f', 2),
-        zoomFactorAsString(mTargetZoomFactor),
+        QString::number(viewBounds().left()/*mCenter.x()*/, 'f', 8),
+        QString::number(viewBounds().top()/*mCenter.y()*/, 'f', 8),
+        zoomFactorAsString(mTargetZoomFactor, 8),
         QString::number(mFrameCounter->lastFPS(), 'f', 1));
 
     painter.drawText(0, 10, str);
@@ -612,6 +654,29 @@ void EditorWidget::onTilesChangedArea(const LevelData* level, const LevelBounds&
 {
     /// @todo We can probably optimize with a partial refresh
     onTilesChanged(level);
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void EditorWidget::roundCenterToScreenPixel()
+{
+    //do not adjust while a zoom is in progress
+    //if (mZoomFactor != mTargetZoomFactor)
+    //    return;
+
+    float expectedMultipleOf = 1. / mZoomFactor;
+
+    //if width is odd, the resulting X should be at a half-pixel
+    float offsetX = (width() % 2) ? expectedMultipleOf / 2. : 0.;
+    float offsetY = (height() % 2) ? expectedMultipleOf / 2. : 0.;
+
+    float xRounded = (mCenter.x() - offsetX) / expectedMultipleOf;
+    xRounded = std::round(xRounded) * expectedMultipleOf + offsetX;
+
+    float yRounded = (mCenter.y() - offsetY) / expectedMultipleOf;
+    yRounded = std::round(yRounded) * expectedMultipleOf + offsetY;
+
+    mCenter = LevelCoords(QPointF(xRounded, yRounded));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -719,13 +784,7 @@ ScreenCoords EditorWidget::screenCenter() const
 void EditorWidget::setViewCenter(const LevelCoords& centerPixel)
 {
     mCenter = centerPixel;
-
-    if (zoomFactor() <= 1.f)
-    {
-        //Do not keep decimals when zoomed out for more consistent rendering
-        mCenter.setX(qRound(mCenter.x()));
-        mCenter.setY(qRound(mCenter.y()));
-    }
+    roundCenterToScreenPixel();
 
     if (mSmoothView->state() == QAbstractAnimation::State::Running)
     {
@@ -836,6 +895,8 @@ void EditorWidget::setViewBoundsAndZoom(const SmoothViewBounds& boundsAndZoom)
         mCenter = pLevel->boundPixelToLevel(boundsAndZoom.mViewBounds.center());
 
     mZoomFactor = boundsAndZoom.mZoomFactor;
+
+    roundCenterToScreenPixel();
 
     if (updatesEnabled())
     {

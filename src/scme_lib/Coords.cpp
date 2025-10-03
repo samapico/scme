@@ -32,3 +32,17 @@ LevelCoords LevelBounds::bounded(const LevelCoords& coord) const
 
     return bounded;
 }
+
+
+
+//////////////////////////////////////////////////////////////////////////
+
+LevelBounds LevelBounds::rounded() const
+{
+    return LevelBounds(QRectF(
+        qRound(left()),
+        qRound(top()),
+        qRound(width()),
+        qRound(height())
+    ));
+}

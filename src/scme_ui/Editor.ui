@@ -153,6 +153,34 @@
       </widget>
      </item>
      <item>
+      <widget class="QCheckBox" name="useSoftwareGrid">
+       <property name="text">
+        <string>Grid SW render</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="drawGridOverTiles">
+       <property name="text">
+        <string>Grid over tiles</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="renderAllTiles">
+       <property name="text">
+        <string>Render all tiles</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="renderTileBorder">
+       <property name="text">
+        <string>Draw tile border</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="verticalSpacer_3">
        <property name="orientation">
         <enum>Qt::Orientation::Vertical</enum>

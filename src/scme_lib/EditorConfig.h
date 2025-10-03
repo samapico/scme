@@ -19,18 +19,31 @@ class SCME_LIB_DLL EditorConfig : public QObject
     Q_OBJECT
 signals:
 
-    void configChanged(EditorConfig* config);
+    void configChanged();
+
+public slots:
+
+    void setDefaultConfig();
+
+    void setRenderAllTiles(bool b);
+
+    void setRenderBorderTiles(bool b);
+
+    void setGridSoftwareRendering(bool b);
+
+    void setGridDrawOverTiles(bool b);
 
 public:
 
-    static EditorConfig sGlobalConfig;
+    static inline EditorConfig& getConfig() { return sGlobalConfig; }
+
+    static constexpr int GRIDLEVELS = 5;
 
     EditorConfig();
-    ~EditorConfig();
+
+    virtual ~EditorConfig();
 
     QPen getGridPen(int tile, float pixelsPerTile) const;
-
-    void setDefaultConfig();
 
     enum GridPreset
     {
@@ -41,8 +54,9 @@ public:
         GB,
         BR,
         BG,
+        Rainbow,
 
-        Custom,
+        //Custom,
 
         GridPresetCount
     };
@@ -70,7 +84,22 @@ public:
 
     float pixelViewOpacityAtZoom(float zoomFactor) const;
 
+    /// If true, send all map tiles to the draw call, which saves having to build the buffer of visible tiles
+    /// If false, only visible tiles are drawn
+    bool mRenderAllTiles = true;
+
+    bool mRenderBorderTiles = true;
+
+    bool mGridSoftwareRendering = false;
+
+    bool mGridDrawOverTiles = false;
+
+    std::array<int, GRIDLEVELS> mGridSizes;
+    std::array<QPen, GRIDLEVELS> mGridPens;
+
 private:
+
+    static EditorConfig sGlobalConfig;
 
     void addZoomLevels(float minZoom, float maxZoom, float mult);
 
@@ -79,9 +108,6 @@ private:
     float mGridPresetHueShift = 75.f;
     float mGridPresetSaturationFactor = .9f;
     float mGridPresetValueFactor = .9f;
-
-    QVector<int> mGridSizes;
-    QVector<QPen> mGridPens;
 
     QPen mDefaultPen;
 

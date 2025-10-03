@@ -33,6 +33,7 @@ class Editor;
 class FrameCounter;
 class TileRenderer;
 class MinimapRenderer;
+class GridRenderer;
 class LevelData;
 
 
@@ -105,6 +106,8 @@ signals:
 
     void cursorMoved(const LevelCoords& coords);
 
+    void framesCounted(double fps);
+
     void levelTilesetChanged(const LevelData* level);
 
     void levelTilesChanged(const LevelData* level);
@@ -145,6 +148,8 @@ private:
 
     void onTilesChangedArea(const LevelData* level, const LevelBounds& bounds);
 
+    void roundCenterToScreenPixel();
+
     QPointer<Editor> mEditor;
 
     QPointer<FrameCounter> mFrameCounter;
@@ -170,6 +175,7 @@ private:
 
     std::unique_ptr<TileRenderer> mTileRenderer;
     std::unique_ptr<MinimapRenderer> mMinimapRenderer;
+    std::unique_ptr<GridRenderer> mGridRenderer;
 
     QPointer<QUndoStack> mUndoStack;
     int mCurrentSetTilesId = 1;

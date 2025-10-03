@@ -30,13 +30,10 @@ EditorConfig::~EditorConfig()
 
 QPen EditorConfig::getGridPen(int tile, float pixelsPerTile) const
 {
-    Q_ASSERT(mGridSizes.count() > 0);
+    Q_ASSERT(mGridSizes.size() > 0);
 
-    int i = mGridSizes.count();
-
-    while (i)
+    for (auto i = 0; i < mGridSizes.size(); i++)
     {
-        --i;
         if (!(tile % mGridSizes[i]))
         {
             QPen pen = mGridPens[i];
@@ -74,12 +71,12 @@ QPen EditorConfig::getGridPen(int tile, float pixelsPerTile) const
 void EditorConfig::setDefaultConfig()
 {
     //Default config
-    mGridSizes = { 1, 4, 16, 64, 256 };
+    mGridSizes = { 256, 64, 16, 4, 1 };
 
     setGridPreset(Grey);
-    Q_ASSERT(mGridSizes.count() == mGridPens.count());
+    Q_ASSERT(mGridSizes.size() == mGridPens.size());
 
-    addZoomLevels(1.0f/32.0f, 8.0f, 2.0f);
+    addZoomLevels(1.0f/32.0f, 4.0f, 2.0f);
 
     mPixelsPerGridFadeIn = 9.0f;
     mPixelsPerGridFadeOut = 15.0f;
@@ -90,6 +87,38 @@ void EditorConfig::setDefaultConfig()
     mSmoothCameraTime = 350;
 
     mSmoothDragSpeed = 0.0; //Multiplier; 0 disables it
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorConfig::setRenderAllTiles(bool b)
+{
+    mRenderAllTiles = b;
+    emit configChanged();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorConfig::setRenderBorderTiles(bool b)
+{
+    mRenderBorderTiles = b;
+    emit configChanged();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorConfig::setGridSoftwareRendering(bool b)
+{
+    mGridSoftwareRendering = b;
+    emit configChanged();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void EditorConfig::setGridDrawOverTiles(bool b)
+{
+    mGridDrawOverTiles = b;
+    emit configChanged();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -109,60 +138,67 @@ float EditorConfig::pixelViewOpacityAtZoom(float zoomFactor) const
 
 void EditorConfig::setGridPreset(GridPreset preset)
 {
-    mGridPens.resize(mGridSizes.count());
+    //if (preset == Custom)
+    //{
+    //    return;
+    //}
 
-    if (preset == Custom)
+    for (int i = 0; i < mGridSizes.size(); i++)
     {
-        return;
-    }
-
-    for (int i = 0; i < mGridSizes.count(); i++)
-    {
-        //primary color = 0.5 + 0.5*i/(count-1)
-        float p = qMin(1.0f, 0.5f + 0.5f * ((float)(i)) / (mGridSizes.count() - 1));
-
-        //secondary color = 0 + 0.5*(i-1)/(count-1)
-        float s = qMax(0.0f, 0.5f * ((float)(i))/(mGridSizes.count() - 1));
-
-        float t = qMax(0.0f, 0.25f * ((float)(i-2))/(mGridSizes.count() - 1));
-
-        float a = mGridPresetAlphaNear + (mGridPresetAlphaFar - mGridPresetAlphaNear) * ((float)i / (mGridSizes.count() - 1));
-
         QColor c;
 
-        switch (preset)
+        if (preset == Rainbow)
         {
-        case Grey:
-            c.setRgbF(p, p, p, a);
-            break;
-        case RG:
-            c.setRgbF(p, s, t, a);
-            break;
-        case RB:
-            c.setRgbF(p, t, s, a);
-            break;
-        case GR:
-            c.setRgbF(s, p, t, a);
-            break;
-        case GB:
-            c.setRgbF(t, p, s, a);
-            break;
-        case BR:
-            c.setRgbF(s, t, p, a);
-            break;
-        case BG:
-            c.setRgbF(t, s, p, a);
-            break;
+            int bits = i + 1;
+            c.setRgbF(bits & 4, bits & 2, bits & 1, 0.5);
+        }
+        else
+        {
+            //primary color = 0.5 + 0.5*i/(count-1)
+            float p = qMin(1.0f, 0.5f + 0.5f * ((float)(i)) / (mGridSizes.size() - 1));
+
+            //secondary color = 0 + 0.5*(i-1)/(count-1)
+            float s = qMax(0.0f, 0.5f * ((float)(i)) / (mGridSizes.size() - 1));
+
+            float t = qMax(0.0f, 0.25f * ((float)(i - 2)) / (mGridSizes.size() - 1));
+
+            float a = mGridPresetAlphaNear + (mGridPresetAlphaFar - mGridPresetAlphaNear) * ((float)i / (mGridSizes.size() - 1));
+
+
+            switch (preset)
+            {
+            case Grey:
+                c.setRgbF(p, p, p, a);
+                break;
+            case RG:
+                c.setRgbF(p, s, t, a);
+                break;
+            case RB:
+                c.setRgbF(p, t, s, a);
+                break;
+            case GR:
+                c.setRgbF(s, p, t, a);
+                break;
+            case GB:
+                c.setRgbF(t, p, s, a);
+                break;
+            case BR:
+                c.setRgbF(s, t, p, a);
+                break;
+            case BG:
+                c.setRgbF(t, s, p, a);
+                break;
+            }
+
+            //shift hue and grey it out a bit
+            c.setHsv(
+                (c.hue() + (int)(mGridPresetHueShift * ((float)(i)) / (mGridSizes.size() - 1))) % 360,
+                c.saturation() * mGridPresetSaturationFactor,
+                c.value() * mGridPresetValueFactor,
+                a * 255);
         }
 
-        //shift hue and grey it out a bit
-        c.setHsv(
-            (c.hue() + (int)(mGridPresetHueShift * ((float)(i)) / (mGridSizes.count() - 1))) % 360,
-            c.saturation() * mGridPresetSaturationFactor,
-            c.value() * mGridPresetValueFactor,
-            a * 255);
-
-        mGridPens[i].setColor(c);
+        mGridPens[mGridSizes.size() - i - 1].setColor(c);
     }
 }
 

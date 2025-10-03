@@ -4,6 +4,7 @@
 #include "TileInfo.h"
 #include "Coords.h"
 #include "LevelData.h"
+#include "EditorConfig.h"
 
 #include <QtGui/QImage>
 #include <QtCore/QElapsedTimer>
@@ -109,6 +110,18 @@ void TileRenderer::init(const Tileset& tileset)
     mProgram.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/tile_fs.glsl");
     mProgram.link();
 
+    // Set shader uniforms that never change
+    mProgram.bind();
+    mProgram.setUniformValue("uAtlasSize", QVector2D(TILESET_W, TILESET_WITH_EXTRA_H));
+    mProgram.setUniformValue("uTilePx", QVector2D(TILE_W, TILE_H));
+
+    GLint loc = mProgram.uniformLocation("uGridDim");
+    glUniform2ui(loc, TILESET_COUNT_W, TILESET_COUNT_H + TILESET_EXTRA_COUNT_H);
+
+    mProgram.setUniformValue("uAtlas", 0);
+
+    mProgram.release();
+
     // --- Geometry: a 16x16 quad, triangle strip ---
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
@@ -204,15 +217,20 @@ void TileRenderer::updateTileset(const Tileset& tileset)
 
 //////////////////////////////////////////////////////////////////////////
 
-void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor)
+void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor, bool drawLevelTiles, bool drawBorderTiles)
 {
     if (!level)
         return;
+
+    if (!drawLevelTiles && !drawBorderTiles)
+        return; //nothing to draw
 
     glPushAttrib(GL_ENABLE_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
+
+
 
     int tx0 = 0;
     int ty0 = 0;
@@ -222,7 +240,7 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
     // Prevent shimmering when zooming by forcing the pixel boundaries to be exact
     LevelBounds visibleAreaSnapped = visibleArea;
 
-    if (true /* && config.Render.RenderAllTiles*/)
+    if (EditorConfig::getConfig().mRenderAllTiles)
     {
         // Let's just build the instances for ALL the tiles
         // On most frames we'll be able to reuse it to save time,
@@ -239,49 +257,6 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
         level->boundTileToLevel(tx1, ty1);
     }
 
-    TileCoords tbTopLeft(tx0, ty0);
-    TileCoords tbBottomRight(tx1, ty1);
-
-    if (tbTopLeft == mCachedBoundsTopLeft && tbBottomRight == mCachedBoundsBottomRight)
-    {
-        //use cached instances as is
-    }
-    else
-    {
-        // Build instance data for visible tiles
-        // Use the previous cache's capacity
-        std::vector<TileInstanceData> instances(std::move(mCachedInstances));
-        instances.reserve((tx1 - tx0 + 1) * (ty1 - ty0 + 1));
-
-        for (int y = ty0; y <= ty1; ++y)
-        {
-            const Tile* row = level->tiles().rowPtr(y);
-
-            for (int x = tx0; x <= tx1; ++x)
-            {
-                TileId v = row[x];
-
-                if (v /* && config.DrawSpecialTiles || v <= TILESET_COUNT */)
-                    instances.push_back(TileInstanceData{
-                        (int16_t)x, (int16_t)y, (uint16_t)(v - 1), (uint16_t)TileInfoDict[v].mSize
-                        });
-                //else empty tile
-            }
-        }
-
-        mCachedInstances = std::move(instances);
-        mCachedBoundsTopLeft = tbTopLeft;
-        mCachedBoundsBottomRight = tbBottomRight;
-    }
-
-    glBindVertexArray(vao_);
-
-    // Update instance buffer
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVbo_);
-    glBufferData(GL_ARRAY_BUFFER,
-        mCachedInstances.size() * sizeof(TileInstanceData),
-        mCachedInstances.empty() ? nullptr : mCachedInstances.data(),
-        GL_DYNAMIC_DRAW);
 
     // Bind program and set uniforms
     mProgram.bind();
@@ -289,23 +264,80 @@ void TileRenderer::render(const LevelData* level, const LevelBounds& visibleArea
     QMatrix4x4 mvp = visibleAreaSnapped.orthoPixels();
 
     mProgram.setUniformValue("uMVP", mvp);
-    mProgram.setUniformValue("uAtlasSize", QVector2D(TILESET_W, TILESET_WITH_EXTRA_H));
-    mProgram.setUniformValue("uTilePx", QVector2D(TILE_W, TILE_H));
+    mProgram.setUniformValue("uZoom", zoomFactor);
 
-    GLint loc = mProgram.uniformLocation("uGridDim");
-    glUniform2ui(loc, TILESET_COUNT_W, TILESET_COUNT_H + TILESET_EXTRA_COUNT_H);
+    // Offset tiles by half a screen pixel to avoid flickering with the grid lines
+    mProgram.setUniformValue("uDrawOffset", QVector2D(-0.25f / zoomFactor, -0.25f / zoomFactor));
 
-    mProgram.setUniformValue("uAtlas", 0);
+
     glActiveTexture(GL_TEXTURE0);
     mTexTileset->bind();
 
-    // Draw 4-vertex quad instanced N times
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(mCachedInstances.size()));
+    if (drawLevelTiles)
+    {
+        TileCoords tbTopLeft(tx0, ty0);
+        TileCoords tbBottomRight(tx1, ty1);
 
+        if (tbTopLeft == mCachedBoundsTopLeft && tbBottomRight == mCachedBoundsBottomRight)
+        {
+            //use cached instances as is
+        }
+        else
+        {
+            // Build instance data for visible tiles
+            // Use the previous cache's capacity
+            std::vector<TileInstanceData> instances(std::move(mCachedInstances));
+            instances.reserve((tx1 - tx0 + 1) * (ty1 - ty0 + 1));
 
-    // todo: if (config.Render.DrawBorder)
-    glBindVertexArray(borderVao_);
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(BORDER_TILE_COUNT));
+            for (int y = ty0; y <= ty1; ++y)
+            {
+                const Tile* row = level->tiles().rowPtr(y);
+
+                for (int x = tx0; x <= tx1; ++x)
+                {
+                    TileId v = row[x];
+
+                    if (v /* && config.DrawSpecialTiles || v <= TILESET_COUNT */)
+                        instances.push_back(TileInstanceData{
+                            (int16_t)x, (int16_t)y, (uint16_t)(v - 1), (uint16_t)TileInfoDict[v].mSize
+                            });
+                    //else empty tile
+                }
+            }
+
+            mCachedInstances = std::move(instances);
+            mCachedBoundsTopLeft = tbTopLeft;
+            mCachedBoundsBottomRight = tbBottomRight;
+        }
+
+        glBindVertexArray(vao_);
+
+        // Update instance buffer
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVbo_);
+        glBufferData(GL_ARRAY_BUFFER,
+            mCachedInstances.size() * sizeof(TileInstanceData),
+            mCachedInstances.empty() ? nullptr : mCachedInstances.data(),
+            GL_DYNAMIC_DRAW);
+
+        mProgram.setUniformValue("uDrawZ", ZCOORD_MAPTILES);
+
+        // Draw 4-vertex quad instanced N times
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(mCachedInstances.size()));
+    }
+
+    if (drawBorderTiles)
+    {
+        if (visibleArea.tileLeft() < 0 ||
+            visibleArea.tileRight() >= MAP_W ||
+            visibleArea.tileTop() < 0 ||
+            visibleArea.tileBottom() >= MAP_H)
+        {
+            mProgram.setUniformValue("uDrawZ", ZCOORD_MAPBORDER);
+
+            glBindVertexArray(borderVao_);
+            glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(BORDER_TILE_COUNT));
+        }
+    }
 
     mTexTileset->release();
     mProgram.release();

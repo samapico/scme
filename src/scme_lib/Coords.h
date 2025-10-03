@@ -85,6 +85,9 @@ public:
     /// Default constructor (null bounds)
     LevelBounds() : QRectF() {}
 
+    /// Copy constructor
+    LevelBounds(const LevelBounds& bounds) : QRectF(bounds) {}
+
     explicit LevelBounds(const QRectF& bounds) : QRectF(bounds) {}
 
     LevelBounds(const LevelCoords& topLeft, const LevelCoords& bottomRight) : QRectF(topLeft, bottomRight) {}
@@ -93,6 +96,9 @@ public:
 
     /// Bound \a coord within these bounds
     LevelCoords bounded(const LevelCoords& coord) const;
+
+    /// Snaps the bounds to the nearest integer pixel
+    LevelBounds rounded() const;
 
     inline LevelCoords topLeft() const { return LevelCoords(QRectF::topLeft()); }
 

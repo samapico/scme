@@ -41,7 +41,7 @@ public:
 
     void updateTileset(const Tileset& tileset);
 
-    void render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor);
+    void render(const LevelData* level, const LevelBounds& visibleArea, float zoomFactor, bool drawLevelTiles, bool drawBorderTiles);
 
     void clearCache();
 
@@ -64,8 +64,6 @@ protected:
     };
 
 #pragma pack(pop)
-
-
 
     void setTileQuadVertexAttributes(GLuint& layoutIndex);
 
