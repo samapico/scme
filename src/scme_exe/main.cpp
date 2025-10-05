@@ -1,6 +1,8 @@
 #include "Editor.h"
 
 #include "Global.h"
+
+#include "Logger.h"
 #include <QtCore/QDir>
 #include <QtCore/QSysInfo>
 #include <QtWidgets/QApplication>
@@ -14,12 +16,43 @@ using namespace ::SCME;
 
 ///////////////////////////////////////////////////////////////////////////
 
+static bool testArg(const QString& arg)
+{
+    return arg.startsWith("-" + arg, Qt::CaseInsensitive);
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+static bool testArg(const QString& arg, QString& outArgValue)
+{
+    if (testArg(arg))
+    {
+        int split = arg.indexOf('=');
+
+        if (split >= 0)
+        {
+            outArgValue = arg.mid(split + 1);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     a.setApplicationName("SCME");
     a.setApplicationVersion(applicationVersionString());
     a.setWindowIcon(QIcon(":/ui/scme_icon_256.png"));
+
+    Logger::cleanupLogDir(5 * 1024 * 1024); //5 MB max total logs
+    Logger::initLogger(Logger::defaultLogFile());
+
+    LogInfo() << "========================";
 
     QStringList args = a.arguments();
     args.removeFirst(); //first arg is the executable itself
@@ -34,7 +67,7 @@ int main(int argc, char *argv[])
         if (arg.startsWith('-'))
         {
             //looks like a switch
-            qWarning() << "Unknown argument:" << arg;
+            LogWarn() << "Unknown argument:" << arg;
         }
         else
         {
@@ -44,7 +77,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                qWarning() << "Cannot specify multiple arguments. Ignored:" << arg;
+                LogWarn() << "Cannot specify multiple arguments. Ignored:" << arg;
             }
         }
     }
@@ -59,8 +92,9 @@ int main(int argc, char *argv[])
     fmt.setDepthBufferSize(0);
     QSurfaceFormat::setDefaultFormat(fmt);
 
-    qDebug().noquote() << "Starting" << a.applicationName() << a.applicationVersion() << "...";
-    qDebug().noquote() << QSysInfo::prettyProductName() << QSysInfo::currentCpuArchitecture();
+    LogInfo() << "Starting" << a.applicationName() << a.applicationVersion() << "...";
+    LogInfo() << "args:" << args;
+    LogInfo() << QSysInfo::prettyProductName() << QSysInfo::currentCpuArchitecture();
 
     Editor w(parsedArgs.filename);
     w.showMaximized();
@@ -68,5 +102,10 @@ int main(int argc, char *argv[])
     /// Parse arguments
     a.arguments();
 
-    return a.exec();
+    int ret = a.exec();
+
+    LogInfo() << "Closed" << a.applicationName() << a.applicationVersion();
+    LogInfo() << "------------------------";
+
+    return ret;
 }

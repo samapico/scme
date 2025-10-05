@@ -120,10 +120,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="logger.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\appver.h" />
+    <ClInclude Include="logger.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="scme.rc" />

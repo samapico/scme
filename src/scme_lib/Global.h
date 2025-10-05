@@ -14,6 +14,7 @@
 #include <memory>
 #include <QtGui/QMatrix4x4>
 #include <QtGui/QColor>
+#include <QtCore/QtLogging>
 
 #include "../appver.h"
 
@@ -152,7 +153,30 @@ namespace SCME {
         );
     }
 
+    inline static QDebug& LogDebug() { return qDebug().noquote(); }
+
+    inline static QDebug& LogInfo() { return qInfo().noquote(); }
+
+    inline static QDebug& LogWarn() { return qWarning().noquote(); }
+
+    inline static QDebug& LogCrit() { return qCritical().noquote(); }
+
 
 } // End namespace SCME
+
+//Enforce usage of logging functions
+
+#undef qDebug
+//#define qDebug SCME::LogDebug
+
+#undef qInfo
+//#define qInfo SCME::LogInfo
+
+#undef qWarning
+//#define qWarning SCME::LogWarn
+
+#undef qCritical
+//#define qCritical SCME::LogCrit
+
 
 #endif // INC_Global_H

@@ -75,11 +75,13 @@ public slots:
 
     bool openLevel(const QString& filename);
 
+    bool saveLevelPrompt();
+
     bool saveLevel();
 
     bool saveLevelAs();
 
-    bool saveLevelAs(const QString& filename);
+    bool saveLevelToFile(const QString& filename);
 
     void toggleGridPreset();
 

@@ -59,6 +59,8 @@ public:
 
     TileCoords boundTileToLevel(const TileCoords& tileXY) const;
 
+    QString levelFilePath() const;
+
 protected:
 
     /// A tile, as it is represented in a .lvl file
@@ -93,6 +95,8 @@ protected:
     ExtraLevelData mExtraLevelData;
 
     Tileset mTileset;
+
+    QString mLevelFilePath;
 };
 
 

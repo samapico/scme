@@ -31,7 +31,7 @@ QColor TileInfo::pixelColor(PixelColor paletteColor)
 
 TilePixelColorPalette TilePixelColorPalette::getDefaultPalette()
 {
-    qDebug() << "@getDefaultPalette()";
+    LogDebug() << "@getDefaultPalette()";
 
     return { {
         QColor(Qt::transparent), // PixelColorVoid

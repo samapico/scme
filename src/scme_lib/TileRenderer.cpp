@@ -101,7 +101,7 @@ void TileRenderer::init(const Tileset& tileset)
             mTexTileset->release();
         }
 
-        qDebug() << "@TileRenderer::init" << img.format();
+        LogDebug() << "@TileRenderer::init" << img.format();
     }
 
     // --- Load shaders ---

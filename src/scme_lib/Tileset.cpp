@@ -104,66 +104,40 @@ bool Tileset::load(QDataStream& in, Tileset& tileset, ExtraLevelData& out_eLVLda
     if (!in.device())
         return false;
 
-    //         'update the menu's
-    //         'TORESTORE
-    // '        frmGeneral.mnudiscardtileset.Enabled = True
-    // '        frmGeneral.mnuExportTileset.Enabled = True
-    //         'rewind to beginning
-    //         Seek #f, 1
-
-    //         Get #f, , bmpFileheader
-    //         Get #f, , BMPInfoHeader
-
     qint64 startPos = in.device()->pos();
 
     in.readRawData((char*)&tileset.mFileHeader, sizeof(Tileset::BitmapFileHeader));
 
     in.readRawData((char*)&tileset.mInfoHeader, sizeof(Tileset::BitmapInfoHeader));
 
-
-    //         'check if its 8/24 bit, normally it would be else we
-    //         'have a corrupt lvl file
-    //         'but check anyway
-    //         AddDebug "OpenMap, Tileset found"
-    //         AddDebug "OpenMap, " & BitmapHeaderInfoString(BMPInfoHeader)
-    //         AddDebug "OpenMap, " & BitmapFileInfoString(bmpFileheader)
-    //
-    //         If BMPInfoHeader.biBitCount < 8 Then
-    //             AddDebug "OpenMap, Tileset is invalid"
-    //             MessageBox "Invalid tileset within lvl file!", vbExclamation
-    //             Close #f
-    //             frmGeneral.IsBusy("frmMain" & id & ".OpenMap") = False
-    //             Exit Sub
-    //         End If
-
     Q_ASSERT(tileset.mInfoHeader.biBitCount >= 8);
 
     in.device()->seek(startPos);
     if (tileset.mImage.load(in.device(), "bmp"))
     {
-        qDebug() << "Read " << in.device()->pos() - startPos << " bytes in tileset";
-        qDebug() << "Now at " << in.device()->pos();
+        LogInfo() << "Read" << in.device()->pos() - startPos << "bytes in tileset";
+        LogDebug() << "Now at" << in.device()->pos();
     }
 
     if (tileset.mFileHeader.bfReserved1)
     {
-        qDebug() << "Possible eLVL data at " << tileset.mFileHeader.bfReserved;
+        LogInfo() << "Possible eLVL data at" << tileset.mFileHeader.bfReserved;
 
         in.device()->seek(tileset.mFileHeader.bfReserved);
 
         if (ExtraLevelData::load(in, out_eLVLdata))
         {
-            qDebug() << "eLVL data:" << out_eLVLdata.mBytes.toPercentEncoding();
+            LogInfo() << "eLVL data:" << out_eLVLdata.mBytes.toPercentEncoding();
         }
 
-        qDebug() << "Now at " << in.device()->pos();
+        LogDebug() << "Now at" << in.device()->pos();
     }
     else
     {
-        qDebug() << "No eLVL data";
+        LogInfo() << "No eLVL data";
     }
 
-    qDebug() << "Jumping to bfSize; " << tileset.mFileHeader.bfSize;
+    LogDebug() << "Jumping to bfSize;" << tileset.mFileHeader.bfSize;
     in.device()->seek(tileset.mFileHeader.bfSize);
 
     tileset.mIsDefault = false;

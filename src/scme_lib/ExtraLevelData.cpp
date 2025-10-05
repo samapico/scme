@@ -49,7 +49,7 @@ bool ExtraLevelData::load(QDataStream& in, ExtraLevelData& eLvlData)
     {
         in.rollbackTransaction(); ///< sets the status to ReadPastEnd, we don't want that
         in.resetStatus();
-        qWarning() << "invalid eLVL data:" << intAsHexString(magic);
+        LogWarn() << "invalid eLVL data:" << intAsHexString(magic);
 
         return false;
     }
@@ -57,14 +57,14 @@ bool ExtraLevelData::load(QDataStream& in, ExtraLevelData& eLvlData)
     in >> len; //total length of the section, including the { magic, len, reserved } header
     in >> reserved;
 
-    qDebug() << len << " bytes in eLVL";
+    LogDebug() << len << " bytes in eLVL";
 
     len -= (sizeof(magic) + sizeof(len) + sizeof(reserved));
 
     QByteArray eLvlBytes(len, Qt::Uninitialized);
     in.readRawData(eLvlBytes.data(), len);
 
-    qDebug() << eLvlBytes.toPercentEncoding();
+    LogDebug() << eLvlBytes.toPercentEncoding();
 
     eLvlData.mBytes = eLvlBytes;
 

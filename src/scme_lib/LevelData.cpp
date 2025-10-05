@@ -40,7 +40,7 @@ LevelData::~LevelData()
 
 bool LevelData::loadFromFile(const QString& filepath)
 {
-    qDebug() << "Loading level file:" << filepath;
+    LogInfo() << "Loading level file:" << filepath;
 
     QFile f(filepath);
 
@@ -48,10 +48,13 @@ bool LevelData::loadFromFile(const QString& filepath)
 
     if (f.open(QIODevice::ReadOnly))
     {
-        return load(in);
-
-        f.close();
+        if (load(in))
+        {
+            mLevelFilePath = filepath;
+            return true;
+        }
     }
+
     return false;
 }
 
@@ -60,31 +63,6 @@ bool LevelData::loadFromFile(const QString& filepath)
 bool LevelData::load(QDataStream& in)
 {
     in.setByteOrder(QDataStream::LittleEndian);
-
-
-    //
-    //
-    //
-    //
-    //     Dim b(3) As Byte
-    //
-    //     Dim f As Integer
-    //     f = FreeFile
-    //
-    //     AddDebug "OpenMap, Opening Map... " & filename & " (" & f & ")"
-    //
-    //     frmGeneral.IsBusy("frmMain" & id & ".OpenMap") = True
-    //
-    //     'initialize autosave countdown
-    //     MinutesCounted = 0
-    //
-    //     Call frmGeneral.UpdateProgressLabel("Reading map header...")
-    //
-    //
-    //
-    //     Open filename For Binary As #f
-    //     Get #f, , b
-    //
 
     bool hasTileset = false;
 
@@ -117,56 +95,37 @@ bool LevelData::load(QDataStream& in)
     //Move back to the beginning
     in.device()->seek(0);
 
-    //
-    //     If Chr(b(0)) & Chr(b(1)) <> "BM" Then
-    //         'there is no tileset attached to the map
-    //         'so the default will be used
-    //         'default on true
-    //         usingDefaultTileset = True
-    //
-    //         AddDebug "OpenMap, No tileset found ; usingDefaultTileset " & usingDefaultTileset
-    //
-    //         'update menu
-    //         'TORESTORE
-    // '        frmGeneral.mnudiscardtileset.Enabled = False
-    // '        frmGeneral.mnuExportTileset.Enabled = False
-    //         'resize magnifier.zoom tileset
-    //         'reset position
-    //         Seek #f, 1
-    //         'Now we are at the correct position for the tiles
-    //     Else
-
 
     if (hasTileset)
     {
-        qDebug() << "Loading tileset...";
+        LogInfo() << "Loading tileset...";
 
         if (Tileset::load(in, loadedTileset, loadedExtraLevelData))
         {
             if (loadedTileset.image().isNull())
             {
-                qWarning() << "No tileset loaded";
+                LogWarn() << "No tileset loaded";
                 hasTileset = false;
             }
 
             if (loadedTileset.image().size() != TILESET_SIZE)
             {
-                qWarning() << "Invalid tileset dimensions:" << loadedTileset.image().size();
+                LogWarn() << "Invalid tileset dimensions:" << loadedTileset.image().size();
                 hasTileset = false;
             }
 
-            qDebug() << "Loaded tileset:" << loadedTileset.image().format() << loadedTileset.fileHeader().bfSize << loadedTileset.infoHeader().biBitCount << loadedTileset.infoHeader().biPlanes << loadedTileset.infoHeader().biSize << loadedTileset.infoHeader().biSizeImage;
+            LogInfo() << "Loaded tileset:" << loadedTileset.image().format() << loadedTileset.fileHeader().bfSize << loadedTileset.infoHeader().biBitCount << loadedTileset.infoHeader().biPlanes << loadedTileset.infoHeader().biSize << loadedTileset.infoHeader().biSizeImage;
         }
         else
         {
-            qWarning() << "Error loading tileset:" << in.status();
+            LogWarn() << "Error loading tileset:" << in.status();
             hasTileset = false;
         }
     }
 
     if (!hasTileset)
     {
-        qDebug() << "Using default tileset...";
+        LogInfo() << "Using default tileset...";
         loadedTileset.setDefault();
     }
 
@@ -253,7 +212,7 @@ bool LevelData::load(QDataStream& in)
     auto pcurseek = in.device()->pos();
     auto pendseek = in.device()->size();
 
-    qDebug() << QString("Loading %1 tiles at %2/%3...").arg(
+    LogInfo() << QString("Loading %1 tiles at %2/%3...").arg(
         QString::number((pendseek - pcurseek)/4),
         QString::number(pcurseek),
         QString::number(pendseek));
@@ -271,9 +230,8 @@ bool LevelData::load(QDataStream& in)
 
         if (t._unused1 != 0 || t._unused2 != 0)
         {
-            //qWarning() << "Invalid tile data:" << intAsHexString(t.mBytes);
             badCount++;
-            /// @todo Error message
+            LogWarn() << "Invalid tile at" << in.device()->pos() << badCount << intAsHexString(t.mBytes);
         }
         else
         {
@@ -285,18 +243,18 @@ bool LevelData::load(QDataStream& in)
             }
             else
             {
-                qWarning() << "Read error at" << in.device()->pos();
+                LogWarn() << "Read error at" << in.device()->pos();
             }
         }
     };
 
-    qDebug() << "Loaded" << tileCount << "tiles";
+    LogInfo() << "Loaded" << tileCount << "tiles";
 
     if (badCount)
-        qWarning() << "Loaded" << badCount << "bad tiles";
+        LogWarn() << "Loaded" << badCount << "bad tiles";
 
     if (in.status() != QDataStream::Ok)
-        qWarning() << "Load error:" << in.status();
+        LogWarn() << "Load error:" << in.status();
 
     //     AddDebug "OpenMap, tile data starting at " & Seek(f)
     //
@@ -486,8 +444,6 @@ bool LevelData::load(QDataStream& in)
         mTiles = loadedTiles;
         mExtraLevelData = loadedExtraLevelData;
         mTileset = loadedTileset;
-
-        /// @todo Clear undo/redo stack
 
         return true;
     }
@@ -847,6 +803,13 @@ TileCoords LevelData::boundTileToLevel(const TileCoords& tileXY) const
         std::clamp(tileXY.x(), 0, size().width() - 1),
         std::clamp(tileXY.y(), 0, size().height() - 1)
     );
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+QString LevelData::levelFilePath() const
+{
+    return mLevelFilePath;
 }
 
 //////////////////////////////////////////////////////////////////////////

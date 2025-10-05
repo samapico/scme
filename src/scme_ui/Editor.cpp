@@ -148,7 +148,7 @@ EditorConfig& Editor::config()
 
 void Editor::onUiError(const QString& message)
 {
-    qWarning() << "Error:" << message;
+    LogWarn() << "Error:" << message;
     QMessageBox::warning(this, tr("Error"), message);
 }
 
@@ -184,14 +184,25 @@ void Editor::updateWindowTitle()
 {
     QString strTitle = tr("SCME v%1").arg(applicationVersionString());
 
-    if (!mCurrentLevelFile.isEmpty())
+    auto pLevel = level();
+
+    if (pLevel)
     {
         strTitle.append(" - ");
 
         if (!mUndoGroup.isClean())
             strTitle.append("*");
 
-        strTitle.append(mCurrentLevelFile);
+        QString strLevelFilePath = pLevel->levelFilePath();
+
+        if (strLevelFilePath.isEmpty())
+        {
+            strTitle.append(tr("<Untitled>"));
+        }
+        else
+        {
+            strTitle.append(strLevelFilePath);
+        }
     }
 
     setWindowTitle(strTitle);
@@ -270,6 +281,8 @@ void Editor::newLevel()
 {
     if (closeLevel())
     {
+        LogInfo() << "@Editor::newLevel";
+
         qApp->setOverrideCursor(Qt::WaitCursor);
 
         Q_ASSERT(!mLevel);
@@ -287,6 +300,8 @@ void Editor::newLevel()
 
 bool Editor::openLevel(const QString& filename)
 {
+    LogInfo() << "@Editor::openLevel" << filename;
+
     if (!QFile::exists(filename))
     {
         emit uiError(tr("File not found: %1").arg(filename));
@@ -304,8 +319,6 @@ bool Editor::openLevel(const QString& filename)
     {
         Q_ASSERT(!mLevel);
         mLevel = loadedLevel;
-
-        mCurrentLevelFile = filename;
 
         onLevelLoaded();
     }
@@ -336,23 +349,37 @@ bool Editor::openLevel()
 
 //////////////////////////////////////////////////////////////////////////
 
-bool Editor::saveLevel()
+bool Editor::saveLevelPrompt()
 {
-    qApp->setOverrideCursor(Qt::WaitCursor);
-
-    /// ...
-
-    mUndoGroup.activeStack()->setClean();
-
-    qApp->restoreOverrideCursor();
-
     return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-bool Editor::saveLevelAs(const QString& filename)
+bool Editor::saveLevel()
 {
+    auto pLevel = level();
+
+    if (!pLevel)
+        return false;
+
+    if (pLevel->levelFilePath().isEmpty())
+    {
+        //Prompt for path
+        return saveLevelPrompt();
+    }
+    else
+    {
+        return saveLevelToFile(pLevel->levelFilePath());
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+bool Editor::saveLevelToFile(const QString& filename)
+{
+    LogInfo() << "@Editor::saveLevelToFile" << filename;
+
     qApp->setOverrideCursor(Qt::WaitCursor);
 
     /// ...
@@ -368,13 +395,15 @@ bool Editor::saveLevelAs(const QString& filename)
 
 bool Editor::saveLevelAs()
 {
-    return saveLevelAs(QString());
+    return saveLevelPrompt();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 bool Editor::closeLevel()
 {
+    LogInfo() << "@Editor::closeLevel";
+
     bool cancel = false;
 
     if (mLevel && false /*@todo isDirty()?*/)
@@ -396,7 +425,6 @@ bool Editor::closeLevel()
         mLevel = nullptr;
     }
 
-    mCurrentLevelFile = QString();
     onLevelLoaded();
 
     return !cancel;

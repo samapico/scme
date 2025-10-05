@@ -24,7 +24,7 @@ LevelTiles::LevelTiles(const LevelTiles& orig) :
     Array2D<Tile>(orig)
 {
     allocateImage();
-    qDebug() << "LevelTiles copied";
+    LogDebug() << "LevelTiles copied";
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ LevelTiles& LevelTiles::operator=(const LevelTiles& rhs)
     //Image should still be valid
     Q_ASSERT(mImage.get());
 
-    qDebug() << "@LevelTiles::operator=: img data ptr = " << mImage->bits() << "tileptr=" << rowPtr(0);
+    LogDebug() << "@LevelTiles::operator=: img data ptr = " << mImage->bits() << "tileptr=" << rowPtr(0);
     Q_ASSERT(mImage->bits() == reinterpret_cast<uchar*>(rowPtr(0)));
 
     return *this;
@@ -71,7 +71,7 @@ void LevelTiles::allocateImage()
 
     //Note: if we provide QImage with a const uchar pointer, it will deep copy the data;
     //      we want to give it a non-const pointer, and it will use that data directly
-    qDebug() << "@LevelTiles::allocateImage: img data ptr = " << mImage->bits() << "tileptr=" << rowPtr(0);
+    LogDebug() << "@LevelTiles::allocateImage: img data ptr = " << mImage->bits() << "tileptr=" << rowPtr(0);
     Q_ASSERT(mImage->bits() == reinterpret_cast<uchar*>(rowPtr(0)));
 }
 
@@ -79,7 +79,7 @@ void LevelTiles::allocateImage()
 
 LevelTiles::PixelPalette LevelTiles::getColorTableForTiles()
 {
-    qDebug() << "@getPixelPalette" << TilePixelColorPalette::sCurrentPalette.mPixelColorPalette;
+    LogDebug() << "@getPixelPalette" << TilePixelColorPalette::sCurrentPalette.mPixelColorPalette;
 
     PixelPalette pp(256, Qt::Uninitialized);
     for (int i = 0; i < 256; i++)
